@@ -17,6 +17,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Models;
+using MongoDB.Driver;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -149,6 +151,31 @@ public static class HostApplicationBuilderExtensions
                 .PersistKeysToAzureBlobStorage(blobUrl, tokenCredential)
                 .ProtectKeysWithAzureKeyVault(dataProtectionKeyIdentifier, tokenCredential).Services
                 .AddAzureClientsCore(true);
+            return builder;
+        }
+
+        public async Task<IHostApplicationBuilder> AddPersistenceAsync(SecretClient secretClient, CancellationToken cancellationToken = default)
+        {
+            var applicationName = builder.Configuration["WEBSITE_SITE_NAME"];
+            var tasks = new[]
+            {
+                secretClient.GetSecretAsync("MongoDbUsername", cancellationToken: cancellationToken),
+                secretClient.GetSecretAsync("MongoDbPassword", cancellationToken: cancellationToken),
+            };
+            var result = await Task.WhenAll(tasks);
+            var mongoUsername = result[0].Value.Value;
+            var mongoPassword = result[1].Value.Value;
+            var mongoOptionsSection = builder.Configuration.GetSection(nameof(MongoOptions));
+            var mongoOptions = mongoOptionsSection.Get<MongoOptions>() ?? throw new InvalidOperationException("Invalid 'MongoOptions'.");
+            mongoOptions.ApplicationName = applicationName ?? builder.Environment.ApplicationName;
+            var mongoIdentity = new MongoInternalIdentity(mongoOptions.DatabaseName, mongoUsername);
+            var mongoIdentityEvidence = new PasswordEvidence(mongoPassword);
+            mongoOptions.Credential = new MongoCredential("SCRAM-SHA-256", mongoIdentity, mongoIdentityEvidence);
+            builder.Services.Configure<MongoOptions>(mongoOptionsSection);
+            var mongoClient = new MongoClient(mongoOptions);
+            builder.Services.AddSingleton<IMongoClient>(mongoClient);
+            var database = mongoClient.GetDatabase(mongoOptions.DatabaseName);
+            builder.Services.AddSingleton(database);
             return builder;
         }
     }

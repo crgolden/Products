@@ -20,6 +20,7 @@ try
     var secretClient = builder.Configuration.ToSecretClient(tokenCredential);
     builder.Services.AddOpenApi();
     await builder.AddObservabilityAsync(secretClient);
+    await builder.AddPersistenceAsync(secretClient);
     builder.AddDataProtection(tokenCredential);
     builder.Services.AddHealthChecks();
     builder.AddAuth();
