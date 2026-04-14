@@ -54,7 +54,6 @@ public static class HostApplicationBuilderExtensions
                         ["deployment.environment"] = builder.Environment.EnvironmentName.ToLowerInvariant()
                     });
                 })
-                .UseAzureMonitor()
                 .WithMetrics(meterProviderBuilder =>
                 {
                     meterProviderBuilder
