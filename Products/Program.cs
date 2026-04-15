@@ -2,7 +2,11 @@
 using System.Diagnostics;
 using System.Security.Claims;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.OData;
+using Microsoft.OData.ModelBuilder;
 using Products.Extensions;
+using Products.Models;
+using Products.OpenApi;
 using Serilog;
 #pragma warning restore SA1200
 
@@ -18,10 +22,27 @@ try
 
     var tokenCredential = await builder.Configuration.ToTokenCredentialAsync();
     var secretClient = builder.Configuration.ToSecretClient(tokenCredential);
-    builder.Services.AddOpenApi();
+    builder.Services.AddOpenApi(openApiOptions =>
+    {
+        openApiOptions.AddDocumentTransformer<ODataQueryParameterTransformer>();
+    });
     await builder.AddObservabilityAsync(secretClient);
     await builder.AddPersistenceAsync(secretClient);
     builder.AddDataProtection(tokenCredential);
+    builder.Services.AddControllers().AddOData(oDataOptions =>
+    {
+        var modelBuilder = new ODataConventionModelBuilder();
+        modelBuilder.EntitySet<Product>("Products");
+        var model = modelBuilder.GetEdmModel();
+        oDataOptions.Select();
+        oDataOptions.Filter();
+        oDataOptions.OrderBy();
+        oDataOptions.Expand();
+        oDataOptions.Count();
+        oDataOptions.SetMaxTop(100);
+        oDataOptions.AddRouteComponents("odata", model);
+    });
+    builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddHealthChecks();
     builder.AddAuth();
     builder.Services.Configure<ForwardedHeadersOptions>(forwardedHeadersOptions =>
@@ -50,13 +71,16 @@ try
     if (app.Environment.IsDevelopment())
     {
         app.UseDeveloperExceptionPage();
+        app.UseODataRouteDebug();
     }
     else
     {
         app.UseHsts();
     }
 
-    app.UseHttpsRedirection().UseAuthorization();
+    app.UseHttpsRedirection();
+    app.UseAuthentication();
+    app.UseAuthorization();
     app.Use((ctx, next) =>
     {
         if (ctx.User.Identity?.IsAuthenticated != true)
@@ -72,7 +96,7 @@ try
     });
     app.MapOpenApi();
     app.MapHealthChecks("/health").DisableHttpMetrics();
-    app.MapStaticAssets();
+    app.MapControllers();
     await app.RunAsync();
 }
 catch (Exception ex) when (ex is not HostAbortedException)

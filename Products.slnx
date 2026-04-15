@@ -6,5 +6,6 @@
     <File Path="global.json" />
     <File Path="README.md" />
   </Folder>
+  <Project Path="Products.Tests/Products.Tests.csproj" Id="aaa1c76a-e230-426e-b3f9-342b7519ba99" />
   <Project Path="Products/Products.csproj" />
 </Solution>

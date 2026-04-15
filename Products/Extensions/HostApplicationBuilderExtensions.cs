@@ -18,6 +18,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Models;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
+using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -163,19 +166,36 @@ public static class HostApplicationBuilderExtensions
                 secretClient.GetSecretAsync("MongoDbPassword", cancellationToken: cancellationToken),
             };
             var result = await Task.WhenAll(tasks);
-            var mongoUsername = result[0].Value.Value;
-            var mongoPassword = result[1].Value.Value;
-            var mongoOptionsSection = builder.Configuration.GetSection(nameof(MongoOptions));
-            var mongoOptions = mongoOptionsSection.Get<MongoOptions>() ?? throw new InvalidOperationException("Invalid 'MongoOptions'.");
-            mongoOptions.ApplicationName = applicationName ?? builder.Environment.ApplicationName;
-            var mongoIdentity = new MongoInternalIdentity(mongoOptions.DatabaseName, mongoUsername);
-            var mongoIdentityEvidence = new PasswordEvidence(mongoPassword);
-            mongoOptions.Credential = new MongoCredential("SCRAM-SHA-256", mongoIdentity, mongoIdentityEvidence);
-            builder.Services.Configure<MongoOptions>(mongoOptionsSection);
-            var mongoClient = new MongoClient(mongoOptions);
-            builder.Services.AddSingleton<IMongoClient>(mongoClient);
-            var database = mongoClient.GetDatabase(mongoOptions.DatabaseName);
+            var username = result[0].Value.Value;
+            var password = result[1].Value.Value;
+            var databaseName = builder.Configuration.GetValue<string?>("MongoDatabaseName") ?? throw new InvalidOperationException("Invalid 'MongoDatabaseName'.");
+            var identity = new MongoInternalIdentity(databaseName, username);
+            var evidence = new PasswordEvidence(password);
+            var host = builder.Configuration.GetValue<string?>("MongoServerHost") ?? throw new InvalidOperationException("Invalid 'MongoServerHost'.");
+            var port = builder.Configuration.GetValue<int?>("MongoServerPort") ?? throw new InvalidOperationException("Invalid 'MongoServerPort'.");
+            var settings = new MongoClientSettings
+            {
+                ApplicationName = applicationName ?? builder.Environment.ApplicationName,
+                Credential = new MongoCredential("SCRAM-SHA-256", identity, evidence),
+                Server = new MongoServerAddress(host, port),
+                UseTls = true
+            };
+            var client = new MongoClient(settings);
+            builder.Services.AddSingleton<IMongoClient>(client);
+            var database = client.GetDatabase(databaseName);
             builder.Services.AddSingleton(database);
+            BsonClassMap.TryRegisterClassMap<Product>(bsonClassMap =>
+            {
+                bsonClassMap.AutoMap();
+                bsonClassMap.MapIdMember(p => p.Id).SetSerializer(new GuidSerializer(BsonType.String));
+            });
+            var collection = database.GetCollection<Product>("Products");
+            var indexModels = new[]
+            {
+                new CreateIndexModel<Product>(Builders<Product>.IndexKeys.Ascending(p => p.Name)),
+                new CreateIndexModel<Product>(Builders<Product>.IndexKeys.Descending(p => p.CreatedAt)),
+            };
+            await collection.Indexes.CreateManyAsync(indexModels, cancellationToken);
             return builder;
         }
     }

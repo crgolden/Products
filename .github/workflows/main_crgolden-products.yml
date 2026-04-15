@@ -95,6 +95,19 @@ jobs:
       - name: Build with dotnet
         run: dotnet build --no-incremental --configuration Release
 
+      - name: Run unit tests with coverage
+        run: |
+          dotnet-coverage collect `
+            "dotnet test --project Products.Tests --no-build --configuration Release -- --filter-trait Category=Unit --report-xunit-trx --report-xunit-trx-filename unit-tests.trx" `
+            -f xml -o "coverage.xml" -s "coverage.settings.xml"
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: test-results
+          path: Manuals.Tests/bin/Release/net10.0/TestResults/
+
       - name: dotnet publish
         run: >
           dotnet publish Products/Products.csproj
