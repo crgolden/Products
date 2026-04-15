@@ -33,8 +33,35 @@ public class ODataQueryParameterTransformer : IOpenApiDocumentTransformer
         OpenApiDocumentTransformerContext context,
         CancellationToken cancellationToken)
     {
+        EnsureSecurity(document);
         EnsurePaths(document);
         return Task.CompletedTask;
+    }
+
+    private static void EnsureSecurity(OpenApiDocument document)
+    {
+        document.Components ??= new OpenApiComponents();
+        document.Components.SecuritySchemes ??= new Dictionary<string, IOpenApiSecurityScheme>();
+
+        if (!document.Components.SecuritySchemes.ContainsKey("Bearer"))
+        {
+            document.Components.SecuritySchemes["Bearer"] = new OpenApiSecurityScheme
+            {
+                Type = SecuritySchemeType.Http,
+                Scheme = "bearer",
+                BearerFormat = "JWT",
+                Description = "JWT Bearer token issued by the OIDC authority.",
+            };
+        }
+
+        document.Security ??= new List<OpenApiSecurityRequirement>();
+        if (document.Security.Count == 0)
+        {
+            document.Security.Add(new OpenApiSecurityRequirement
+            {
+                [new OpenApiSecuritySchemeReference("Bearer")] = new List<string>(),
+            });
+        }
     }
 
     private static void EnsurePaths(OpenApiDocument document)
