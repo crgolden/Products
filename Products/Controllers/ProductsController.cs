@@ -10,6 +10,7 @@ using Models;
 using MongoDB.AspNetCore.OData;
 using MongoDB.Driver;
 
+[ApiController]
 [Authorize(Policy = nameof(Products))]
 public class ProductsController : ODataController
 {
