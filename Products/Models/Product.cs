@@ -15,5 +15,20 @@ public class Product
 
     public decimal? Price { get; set; }
 
+    public string? Brand { get; set; }
+
+    public string? ModelNumber { get; set; }
+
+    public string? SerialNumber { get; set; }
+
+    public DateTimeOffset? PurchaseDate { get; set; }
+
+    public string? Category { get; set; }
+
+    public string? Description { get; set; }
+
+    // Will be populated from the Manuals API once a product-manual linking feature is built.
+    public string? ManualUrl { get; set; }
+
     public DateTimeOffset? UpdatedAt { get; set; }
 }

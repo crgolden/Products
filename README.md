@@ -44,9 +44,16 @@ GET /odata/Products?$filter=Name eq 'Widget'&$orderby=Price desc&$top=10
 |----------|------|-------|
 | `Id` | `Guid` | Stored as string in MongoDB (`_id`) |
 | `Name` | `string?` | Indexed (ascending) |
-| `Price` | `decimal` | |
+| `Price` | `decimal?` | |
+| `Brand` | `string?` | |
+| `ModelNumber` | `string?` | |
+| `SerialNumber` | `string?` | |
+| `PurchaseDate` | `DateTimeOffset?` | |
+| `Category` | `string?` | |
+| `Description` | `string?` | |
+| `ManualUrl` | `string?` | Will be populated from the Manuals API |
 | `CreatedAt` | `DateTimeOffset` | Set on POST, preserved on PUT/PATCH |
-| `UpdatedAt` | `DateTimeOffset` | Set on POST, updated on PUT/PATCH |
+| `UpdatedAt` | `DateTimeOffset?` | Set on PUT/PATCH |
 
 ## Configuration
 
@@ -54,8 +61,9 @@ The following configuration keys are required. In production they are sourced fr
 
 | Key | Source | Description |
 |-----|--------|-------------|
-| `MongoOptions:Server` | Config | MongoDB connection host |
-| `MongoOptions:DatabaseName` | Config | Target database name |
+| `MongoServerHost` | Config | MongoDB server hostname |
+| `MongoServerPort` | Config | MongoDB server port |
+| `MongoDatabaseName` | Config | Target database name |
 | `MongoDbUsername` | Key Vault secret | MongoDB SCRAM-SHA-256 username |
 | `MongoDbPassword` | Key Vault secret | MongoDB SCRAM-SHA-256 password |
 | `OidcAuthority` | Config | OIDC authority URL for JWT validation |
@@ -80,7 +88,7 @@ dotnet run --project Products/
 curl https://localhost:{port}/openapi/v1.json
 
 # Run unit tests (no Azure creds required)
-dotnet test Products.Tests/ --configuration Release -- --filter-trait "Category=Unit"
+dotnet test --project Products.Tests/ --configuration Release -- --filter-trait "Category=Unit"
 ```
 
 ## Health Check

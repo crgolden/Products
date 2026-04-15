@@ -34,11 +34,18 @@ OData query options on the list endpoint: `$filter`, `$select`, `$orderby`, `$to
 
 ```
 Product
-  Id          Guid             BSON _id, stored as string
-  Name        string?
-  Price       decimal
-  CreatedAt   DateTimeOffset   set on POST, preserved on PUT/PATCH
-  UpdatedAt   DateTimeOffset   set on POST, updated on PUT/PATCH
+  Id            Guid              BSON _id, stored as string
+  Name          string?
+  Price         decimal?
+  Brand         string?
+  ModelNumber   string?
+  SerialNumber  string?
+  PurchaseDate  DateTimeOffset?
+  Category      string?
+  Description   string?
+  ManualUrl     string?           future: populated from Manuals API
+  CreatedAt     DateTimeOffset    set on POST, preserved on PUT/PATCH
+  UpdatedAt     DateTimeOffset?   set on PUT/PATCH
 ```
 
 **Id mapping**: `Guid` is mapped to MongoDB's `_id` field and serialized as a string via `GuidSerializer(BsonType.String)` — configured in `BsonClassMap.TryRegisterClassMap<Product>()` inside `HostApplicationBuilderExtensions.AddPersistenceAsync`. No BSON attributes on the model class.
@@ -48,6 +55,7 @@ Product
 - **Database**: value of `MongoOptions:DatabaseName` in configuration (Key Vault secret: `MongoDbUsername`, `MongoDbPassword`)
 - **Collection**: `Products`
 - **Indexes**: ascending `Name`, descending `CreatedAt` — created on startup in `AddPersistenceAsync`
+- **Future indexes**: if server-side filtering by `Category` or `Brand` is added, create ascending indexes on those fields in `AddPersistenceAsync` alongside the existing ones
 
 ## Build & Run
 
@@ -66,7 +74,7 @@ GET https://localhost:{port}/openapi/v1.json
 
 ```bash
 # Unit tests only (no Azure creds needed)
-dotnet test Products.Tests/ --configuration Release -- --filter-trait "Category=Unit"
+dotnet test --project Products.Tests/ --configuration Release -- --filter-trait "Category=Unit"
 ```
 
 Test categories:
@@ -80,6 +88,8 @@ Test categories:
 - **`[MongoEnableQuery]` on list `Get()`** — translates OData to MongoDB aggregation pipeline server-side; avoids in-memory filtering
 - **`[EnableQuery]` on `Get(Guid key)`** — returns `SingleResult<Product>` so OData can apply `$select`/`$expand` on a single entity
 - **No attributes on `Product`** — all BSON mapping lives in `HostApplicationBuilderExtensions.AddPersistenceAsync`
+- **No `[ApiController]` on `ProductsController`** — `[ApiController]` enforces attribute routing on all actions, which conflicts with OData's conventional routing conventions. OData controllers must not carry it.
+- **OpenAPI paths built manually in `ODataQueryParameterTransformer`** — `Microsoft.AspNetCore.OpenApi` does not auto-discover OData conventional routes (it relies on endpoint metadata that OData's routing system does not expose). The transformer constructs all `/odata/Products` paths and operations from scratch, including OData query parameters on GET endpoints. Do not add `[ApiController]` to fix an empty OpenAPI document; it will break routing instead.
 
 ## Code Style
 
