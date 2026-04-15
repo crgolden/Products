@@ -21,12 +21,14 @@ public class ProductsController : ODataController
         _products = database.GetCollection<Product>("Products");
     }
 
+    [HttpGet]
     [MongoEnableQuery]
     public IQueryable<Product> Get()
     {
         return _products.AsQueryable();
     }
 
+    [HttpGet]
     [EnableQuery]
     public async Task<SingleResult<Product>> Get(
         [FromRoute] Guid key,
@@ -37,6 +39,7 @@ public class ProductsController : ODataController
         return SingleResult.Create(items.AsQueryable());
     }
 
+    [HttpPost]
     public async Task<IActionResult> Post(
         [FromBody] Product product,
         CancellationToken cancellationToken)
@@ -52,6 +55,7 @@ public class ProductsController : ODataController
         return Created(product);
     }
 
+    [HttpPut]
     public async Task<IActionResult> Put(
         [FromRoute] Guid key,
         [FromBody] Product product,
@@ -76,6 +80,7 @@ public class ProductsController : ODataController
         return Updated(product);
     }
 
+    [HttpPatch]
     public async Task<IActionResult> Patch(
         [FromRoute] Guid key,
         [FromBody] Delta<Product> delta,
@@ -99,6 +104,7 @@ public class ProductsController : ODataController
         return Updated(existing);
     }
 
+    [HttpDelete]
     public async Task<IActionResult> Delete(
         [FromRoute] Guid key,
         CancellationToken cancellationToken)
