@@ -11,6 +11,8 @@ using Elastic.Ingest.Elasticsearch;
 using Elastic.Ingest.Elasticsearch.DataStreams;
 using Elastic.Serilog.Sinks;
 using Elastic.Transport;
+using Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Configuration;
@@ -140,7 +142,8 @@ public static class HostApplicationBuilderExtensions
                 {
                     policy.RequireAuthenticatedUser();
                     policy.RequireClaim("scope", "products");
-                });
+                }).Services
+                .AddSingleton<IAuthorizationHandler, ProductAuthorizationHandler>();
             return builder;
         }
 
@@ -194,6 +197,7 @@ public static class HostApplicationBuilderExtensions
             {
                 new CreateIndexModel<Product>(Builders<Product>.IndexKeys.Ascending(p => p.Name)),
                 new CreateIndexModel<Product>(Builders<Product>.IndexKeys.Descending(p => p.CreatedAt)),
+                new CreateIndexModel<Product>(Builders<Product>.IndexKeys.Ascending(p => p.OwnerId)),
             };
             await collection.Indexes.CreateManyAsync(indexModels, cancellationToken);
             return builder;

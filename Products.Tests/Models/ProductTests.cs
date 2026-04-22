@@ -38,6 +38,14 @@ public class ProductTests
 
     [Fact]
     [Trait("Category", "Unit")]
+    public void Product_DefaultOwnerId_IsNull()
+    {
+        var product = new Product();
+        Assert.Null(product.OwnerId);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
     public void Product_DefaultUpdatedAt_IsNull()
     {
         var product = new Product();

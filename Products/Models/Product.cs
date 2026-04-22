@@ -30,5 +30,8 @@ public class Product
     // Will be populated from the Manuals API once a product-manual linking feature is built.
     public string? ManualUrl { get; set; }
 
+    // Server-managed: set on POST from the JWT sub claim; never accepted from client input.
+    public Guid? OwnerId { get; set; }
+
     public DateTimeOffset? UpdatedAt { get; set; }
 }

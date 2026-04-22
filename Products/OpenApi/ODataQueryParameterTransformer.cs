@@ -88,12 +88,12 @@ public class ODataQueryParameterTransformer : IOpenApiDocumentTransformer
                 [HttpMethod.Get] = new OpenApiOperation
                 {
                     Tags = ProductsTags,
-                    Summary = "Get all products",
+                    Summary = "Get all products (anonymous: returns all; authenticated: returns own)",
                     Parameters = new List<IOpenApiParameter>(ListParameters),
+                    Security = new List<OpenApiSecurityRequirement>(),
                     Responses = new OpenApiResponses
                     {
                         ["200"] = JsonResponse(CollectionSchema()),
-                        ["401"] = new OpenApiResponse { Description = "Unauthorized" },
                     },
                 },
                 [HttpMethod.Post] = new OpenApiOperation
@@ -134,47 +134,50 @@ public class ODataQueryParameterTransformer : IOpenApiDocumentTransformer
                     Tags = ProductsTags,
                     Summary = "Get a product by key",
                     Parameters = new List<IOpenApiParameter>(SingleParameters),
+                    Security = new List<OpenApiSecurityRequirement>(),
                     Responses = new OpenApiResponses
                     {
                         ["200"] = JsonResponse(ProductSchema()),
-                        ["401"] = new OpenApiResponse { Description = "Unauthorized" },
                         ["404"] = new OpenApiResponse { Description = "Not Found" },
                     },
                 },
                 [HttpMethod.Put] = new OpenApiOperation
                 {
                     Tags = ProductsTags,
-                    Summary = "Replace a product",
+                    Summary = "Replace a product (must be owner)",
                     RequestBody = JsonBody(ProductSchema()),
                     Responses = new OpenApiResponses
                     {
                         ["200"] = JsonResponse(ProductSchema()),
                         ["400"] = new OpenApiResponse { Description = "Bad Request" },
                         ["401"] = new OpenApiResponse { Description = "Unauthorized" },
+                        ["403"] = new OpenApiResponse { Description = "Forbidden — not the product owner" },
                         ["404"] = new OpenApiResponse { Description = "Not Found" },
                     },
                 },
                 [HttpMethod.Patch] = new OpenApiOperation
                 {
                     Tags = ProductsTags,
-                    Summary = "Partially update a product",
+                    Summary = "Partially update a product (must be owner)",
                     RequestBody = JsonBody(ProductSchema()),
                     Responses = new OpenApiResponses
                     {
                         ["200"] = JsonResponse(ProductSchema()),
                         ["400"] = new OpenApiResponse { Description = "Bad Request" },
                         ["401"] = new OpenApiResponse { Description = "Unauthorized" },
+                        ["403"] = new OpenApiResponse { Description = "Forbidden — not the product owner" },
                         ["404"] = new OpenApiResponse { Description = "Not Found" },
                     },
                 },
                 [HttpMethod.Delete] = new OpenApiOperation
                 {
                     Tags = ProductsTags,
-                    Summary = "Delete a product",
+                    Summary = "Delete a product (must be owner)",
                     Responses = new OpenApiResponses
                     {
                         ["204"] = new OpenApiResponse { Description = "No Content" },
                         ["401"] = new OpenApiResponse { Description = "Unauthorized" },
+                        ["403"] = new OpenApiResponse { Description = "Forbidden — not the product owner" },
                         ["404"] = new OpenApiResponse { Description = "Not Found" },
                     },
                 },
@@ -199,6 +202,7 @@ public class ODataQueryParameterTransformer : IOpenApiDocumentTransformer
                 ["category"] = new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null },
                 ["description"] = new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null },
                 ["manualUrl"] = new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null },
+                ["ownerId"] = new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null, Format = "uuid", ReadOnly = true },
                 ["createdAt"] = new OpenApiSchema { Type = JsonSchemaType.String, Format = "date-time" },
                 ["updatedAt"] = new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null, Format = "date-time" },
             },
