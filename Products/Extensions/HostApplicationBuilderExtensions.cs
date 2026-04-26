@@ -176,12 +176,13 @@ public static class HostApplicationBuilderExtensions
             var evidence = new PasswordEvidence(password);
             var host = builder.Configuration.GetValue<string?>("MongoServerHost") ?? throw new InvalidOperationException("Invalid 'MongoServerHost'.");
             var port = builder.Configuration.GetValue<int?>("MongoServerPort") ?? throw new InvalidOperationException("Invalid 'MongoServerPort'.");
+            var useTls = builder.Configuration.GetValue<bool?>("MongoUseTls") ?? throw new InvalidOperationException("Invalid 'MongoUseTls'.");
             var settings = new MongoClientSettings
             {
                 ApplicationName = applicationName ?? builder.Environment.ApplicationName,
                 Credential = new MongoCredential("SCRAM-SHA-256", identity, evidence),
                 Server = new MongoServerAddress(host, port),
-                UseTls = true
+                UseTls = useTls
             };
             var client = new MongoClient(settings);
             builder.Services.AddSingleton<IMongoClient>(client);
@@ -191,6 +192,7 @@ public static class HostApplicationBuilderExtensions
             {
                 bsonClassMap.AutoMap();
                 bsonClassMap.MapIdMember(p => p.Id).SetSerializer(new GuidSerializer(BsonType.String));
+                bsonClassMap.MapMember(p => p.OwnerId).SetSerializer(new NullableSerializer<Guid>(new GuidSerializer(BsonType.String)));
             });
             var collection = database.GetCollection<Product>("Products");
             var indexModels = new[]
