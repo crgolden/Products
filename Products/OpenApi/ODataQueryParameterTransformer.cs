@@ -6,6 +6,9 @@ using Microsoft.OpenApi;
 
 public class ODataQueryParameterTransformer : IOpenApiDocumentTransformer
 {
+    private const string UnauthorizedDescription = "Unauthorized";
+    private const string NotFoundDescription = "Not Found";
+
     private static readonly HashSet<OpenApiTagReference> ProductsTags = new HashSet<OpenApiTagReference>
     {
         new OpenApiTagReference("Products"),
@@ -105,7 +108,7 @@ public class ODataQueryParameterTransformer : IOpenApiDocumentTransformer
                     {
                         ["201"] = JsonResponse(ProductSchema(), "Created"),
                         ["400"] = new OpenApiResponse { Description = "Bad Request" },
-                        ["401"] = new OpenApiResponse { Description = "Unauthorized" },
+                        ["401"] = new OpenApiResponse { Description = UnauthorizedDescription },
                     },
                 },
             },
@@ -138,7 +141,7 @@ public class ODataQueryParameterTransformer : IOpenApiDocumentTransformer
                     Responses = new OpenApiResponses
                     {
                         ["200"] = JsonResponse(ProductSchema()),
-                        ["404"] = new OpenApiResponse { Description = "Not Found" },
+                        ["404"] = new OpenApiResponse { Description = NotFoundDescription },
                     },
                 },
                 [HttpMethod.Put] = new OpenApiOperation
@@ -150,9 +153,9 @@ public class ODataQueryParameterTransformer : IOpenApiDocumentTransformer
                     {
                         ["200"] = JsonResponse(ProductSchema()),
                         ["400"] = new OpenApiResponse { Description = "Bad Request" },
-                        ["401"] = new OpenApiResponse { Description = "Unauthorized" },
+                        ["401"] = new OpenApiResponse { Description = UnauthorizedDescription },
                         ["403"] = new OpenApiResponse { Description = "Forbidden — not the product owner" },
-                        ["404"] = new OpenApiResponse { Description = "Not Found" },
+                        ["404"] = new OpenApiResponse { Description = NotFoundDescription },
                     },
                 },
                 [HttpMethod.Patch] = new OpenApiOperation
@@ -164,9 +167,9 @@ public class ODataQueryParameterTransformer : IOpenApiDocumentTransformer
                     {
                         ["200"] = JsonResponse(ProductSchema()),
                         ["400"] = new OpenApiResponse { Description = "Bad Request" },
-                        ["401"] = new OpenApiResponse { Description = "Unauthorized" },
+                        ["401"] = new OpenApiResponse { Description = UnauthorizedDescription },
                         ["403"] = new OpenApiResponse { Description = "Forbidden — not the product owner" },
-                        ["404"] = new OpenApiResponse { Description = "Not Found" },
+                        ["404"] = new OpenApiResponse { Description = NotFoundDescription },
                     },
                 },
                 [HttpMethod.Delete] = new OpenApiOperation
@@ -176,9 +179,9 @@ public class ODataQueryParameterTransformer : IOpenApiDocumentTransformer
                     Responses = new OpenApiResponses
                     {
                         ["204"] = new OpenApiResponse { Description = "No Content" },
-                        ["401"] = new OpenApiResponse { Description = "Unauthorized" },
+                        ["401"] = new OpenApiResponse { Description = UnauthorizedDescription },
                         ["403"] = new OpenApiResponse { Description = "Forbidden — not the product owner" },
-                        ["404"] = new OpenApiResponse { Description = "Not Found" },
+                        ["404"] = new OpenApiResponse { Description = NotFoundDescription },
                     },
                 },
             },

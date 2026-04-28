@@ -4,7 +4,18 @@
 
 # Products
 
-ASP.NET Core 10 OData v4 data API managing a `Products` collection in the `crgolden` MongoDB database. Fully authenticated, observable, and documented via OpenAPI.
+ASP.NET Core 10 OData v4 data API managing a `Products` collection in the `crgolden` MongoDB database. Read endpoints are anonymous; write endpoints require a JWT Bearer token with the `products` scope and resource-based ownership. Observable via Azure Monitor and documented via OpenAPI.
+
+## Sibling Applications
+
+Products is a **resource server** in a five-app system. Reads are public; writes require a `products`-scoped JWT and ownership of the row.
+
+| Repo | Role | How Products interacts |
+|---|---|---|
+| [Identity](https://github.com/crgolden/Identity) | OIDC Identity Provider | Issues the access tokens Products validates (scope `products`) |
+| [Experience](https://github.com/crgolden/Experience) | Angular SPA + ASP.NET Core BFF | Sole client today — the BFF proxies authenticated calls to `/odata/Products` and an anonymous public-catalog passthrough |
+| [Manuals](https://github.com/crgolden/Manuals) | Azure OpenAI chat API | Sets the `Product.ManualUrl` field via the chat panel embedded in the Experience product form |
+| [Infrastructure](https://github.com/crgolden/Infrastructure) | Health monitoring dashboard | Polls Products' `/health` endpoint |
 
 ## Tech Stack
 
@@ -18,16 +29,16 @@ ASP.NET Core 10 OData v4 data API managing a `Products` collection in the `crgol
 
 ## API Endpoints
 
-All routes require a valid JWT with the `products` scope claim.
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/odata/Products` | Anonymous | List products. Anonymous callers get all products; authenticated callers (Bearer + `products` scope) are filtered to their own (`OwnerId == sub`). |
+| `GET` | `/odata/Products({key})` | Anonymous | Get a single product by GUID |
+| `POST` | `/odata/Products` | Bearer + `products` | Create a new product; `OwnerId` is set from the JWT `sub` claim |
+| `PUT` | `/odata/Products({key})` | Bearer + `products` + owner | Replace a product (403 if not owner) |
+| `PATCH` | `/odata/Products({key})` | Bearer + `products` + owner | Partially update a product (403 if not owner) |
+| `DELETE` | `/odata/Products({key})` | Bearer + `products` + owner | Delete a product (403 if not owner) |
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/odata/Products` | List products with OData query support |
-| `GET` | `/odata/Products({key})` | Get a single product by GUID |
-| `POST` | `/odata/Products` | Create a new product |
-| `PUT` | `/odata/Products({key})` | Replace a product |
-| `PATCH` | `/odata/Products({key})` | Partially update a product |
-| `DELETE` | `/odata/Products({key})` | Delete a product |
+OIDC tokens are issued by [Identity](https://github.com/crgolden/Identity); the [Experience](https://github.com/crgolden/Experience) BFF forwards them automatically when proxying `/products/api/**`.
 
 ### OData Query Options (list endpoint)
 
@@ -51,7 +62,8 @@ GET /odata/Products?$filter=Name eq 'Widget'&$orderby=Price desc&$top=10
 | `PurchaseDate` | `DateTimeOffset?` | |
 | `Category` | `string?` | |
 | `Description` | `string?` | |
-| `ManualUrl` | `string?` | Will be populated from the Manuals API |
+| `ManualUrl` | `string?` | Populated from the [Manuals](https://github.com/crgolden/Manuals) chat panel embedded in the [Experience](https://github.com/crgolden/Experience) product form |
+| `OwnerId` | `Guid?` | Server-managed: set on POST from the JWT `sub` claim; never accepted from client input |
 | `CreatedAt` | `DateTimeOffset` | Set on POST, preserved on PUT/PATCH |
 | `UpdatedAt` | `DateTimeOffset?` | Set on PUT/PATCH |
 
@@ -63,6 +75,7 @@ The following configuration keys are required. In production they are sourced fr
 |-----|--------|-------------|
 | `MongoServerHost` | Config | MongoDB server hostname |
 | `MongoServerPort` | Config | MongoDB server port |
+| `MongoUseTls` | Config | `true` to require TLS to MongoDB |
 | `MongoDatabaseName` | Config | Target database name |
 | `MongoDbUsername` | Key Vault secret | MongoDB SCRAM-SHA-256 username |
 | `MongoDbPassword` | Key Vault secret | MongoDB SCRAM-SHA-256 password |
@@ -90,6 +103,8 @@ curl https://localhost:{port}/openapi/v1.json
 # Run unit tests (no Azure creds required)
 dotnet test --project Products.Tests/ --configuration Release -- --filter-trait "Category=Unit"
 ```
+
+See [TESTING.md](TESTING.md) for the full testing guide — unit tests, integration tests against real MongoDB, and CI pipeline details.
 
 ## Health Check
 

@@ -89,7 +89,7 @@ jobs:
             /o:"$env:SONAR_ORGANIZATION" `
             /d:sonar.token="$env:SONAR_TOKEN" `
             /d:sonar.host.url="https://sonarcloud.io" `
-            /d:sonar.cs.vscoveragexml.reportsPaths="coverage.xml,coverage-integration.xml" `
+            /d:sonar.cs.vscoveragexml.reportsPaths="coverage.xml" `
             /d:sonar.scanner.skipJreProvisioning=true
 
       - name: Build with dotnet
@@ -106,7 +106,7 @@ jobs:
         if: always()
         with:
           name: test-results
-          path: Manuals.Tests/bin/Release/net10.0/TestResults/
+          path: Products.Tests/bin/Release/net10.0/TestResults/
 
       - name: dotnet publish
         run: >
