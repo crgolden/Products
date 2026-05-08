@@ -89,7 +89,7 @@ The following configuration keys are required. In production they are sourced fr
 ## Local Development
 
 ```bash
-# Prerequisites: az login, User Secrets configured
+# Prerequisites: User Secrets configured, ASPNETCORE_ENVIRONMENT=Development
 
 # Build
 dotnet build Products/
@@ -101,7 +101,8 @@ dotnet run --project Products/
 curl https://localhost:{port}/openapi/v1.json
 
 # Run unit tests (no Azure creds required)
-dotnet test --project Products.Tests/ --configuration Release -- --filter-trait "Category=Unit"
+dotnet build Products.Tests --configuration Debug
+.\Products.Tests\bin\Debug\net10.0\Products.Tests.exe --filter-trait "Category=Unit" --show-live-output on
 ```
 
 See [TESTING.md](TESTING.md) for the full testing guide — unit tests, integration tests against real MongoDB, and CI pipeline details.

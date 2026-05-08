@@ -1,5 +1,6 @@
 namespace Products.Authorization;
 
+using System.Diagnostics;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
@@ -14,7 +15,15 @@ public class ProductAuthorizationHandler
         Product resource)
     {
         var sub = context.User.FindFirstValue("sub");
-        if (sub != null && Guid.TryParse(sub, out var userId) && resource.OwnerId == userId)
+        var authorized = sub != null && Guid.TryParse(sub, out var userId) && resource.OwnerId == userId;
+
+        using var activity = Telemetry.ActivitySource.StartActivity("products.authorization.check_ownership");
+        activity?.SetTag("product.owner_id", resource.OwnerId?.ToString());
+        activity?.SetTag("user.id", sub);
+        activity?.SetTag("operation", requirement.Name);
+        activity?.SetTag("authorized", authorized);
+
+        if (authorized)
         {
             context.Succeed(requirement);
         }

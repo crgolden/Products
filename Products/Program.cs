@@ -19,6 +19,7 @@ using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
 using MongoDB.Driver.Core.Extensions.DiagnosticSources;
+using OpenTelemetry.Instrumentation.AspNetCore;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -57,6 +58,8 @@ try
         var secrets = secretClient.GetProductsSecrets();
         mongoDbUsername = secrets.MongoDbUsername.Value;
         mongoDbPassword = secrets.MongoDbPassword.Value;
+        builder.Services.Configure<AspNetCoreTraceInstrumentationOptions>(options =>
+            options.Filter = context => !context.Request.Path.StartsWithSegments("/health", StringComparison.OrdinalIgnoreCase));
         builder.Logging.AddOpenTelemetry(openTelemetryLoggerOptions =>
         {
             openTelemetryLoggerOptions.IncludeFormattedMessage = true;
@@ -87,17 +90,10 @@ try
                     ["deployment.environment"] = builder.Environment.EnvironmentName.ToLowerInvariant()
                 }))
             .WithMetrics(meterProviderBuilder => meterProviderBuilder
-                .AddAspNetCoreInstrumentation()
-                .AddHttpClientInstrumentation()
                 .AddRuntimeInstrumentation())
             .WithTracing(tracerProviderBuilder => tracerProviderBuilder
                 .SetSampler(new AlwaysOnSampler())
                 .AddSource(nameof(Products))
-                .AddAspNetCoreInstrumentation(aspNetCoreTraceInstrumentationOptions =>
-                {
-                    aspNetCoreTraceInstrumentationOptions.Filter = context => !context.Request.Path.StartsWithSegments("/health", StringComparison.OrdinalIgnoreCase);
-                })
-                .AddHttpClientInstrumentation()
                 .AddSource("MongoDB.Driver.Core.Extensions.DiagnosticSources"))
             .UseAzureMonitor().Services
             .AddDataProtection()

@@ -7,52 +7,36 @@ The Products test suite uses xUnit v3 and is split into two tiers: **unit tests*
 | Tier | Trait | Project | Requires Azure? | Runs in CI |
 |------|-------|---------|-----------------|------------|
 | Unit | `Category=Unit` | `Products.Tests` | No | Every push/PR |
-| Integration | `Category=Integration` | `Products.Tests` | Yes — real MongoDB via Azure Key Vault | Local only (not yet in CI) |
+| Integration | `Category=Integration` | `Products.Tests` | No — MongoDB credentials from User Secrets; no Azure credentials needed | Local only (not yet in CI) |
 
 ---
 
-## Running tests locally
+## Running Tests Locally
 
-> **Build configuration:** `--configuration Release` is shown for consistency with CI; `--configuration Debug` is equally valid for local runs and compiles faster. There is no Angular build or other Release-only artifact involved.
+For the `.NET 10 SDK xUnit caveat` (why `dotnet test` doesn't work) and `ASPNETCORE_ENVIRONMENT` discipline, see the workspace-level [TESTING.md](../TESTING.md).
 
-### Prerequisites
+User Secrets ID: `efff68f7-73ce-43f6-9083-6659719fc179`
 
-Unit tests require no Azure credentials. For integration tests, authenticate first:
+### Unit Tests
 
-```bash
-az login
+No Azure credentials required.
+
+```powershell
+dotnet build Products.Tests --configuration Debug
+.\Products.Tests\bin\Debug\net10.0\Products.Tests.exe --filter-trait "Category=Unit" --show-live-output on
 ```
 
-User Secrets must supply `KeyVaultUri`, `MongoServerHost`, `MongoServerPort`, `MongoUseTls`, `MongoDatabaseName`, and `DefaultAzureCredentialOptions` (see [README.md](README.md#configuration)). MongoDB credentials are read from Azure Key Vault at startup.
+### Integration Tests (require live MongoDB)
 
-### Unit tests
+Requires `ASPNETCORE_ENVIRONMENT=Development` and configured User Secrets (`MongoDbUsername`, `MongoDbPassword`, `MongoServerHost`, `MongoServerPort`, `MongoUseTls`, `MongoDatabaseName`). No `az login` needed — MongoDB credentials come from User Secrets in non-production; Azure credentials are only constructed inside `IsProduction()` in `Program.cs`.
 
-```bash
-dotnet test --project Products.Tests --configuration Debug \
-  -- --filter-trait "Category=Unit"
-```
-
-### Integration tests (require live MongoDB + Key Vault)
-
-```bash
-# Bash / WSL
-ASPNETCORE_ENVIRONMENT=Development \
-dotnet test --project Products.Tests --configuration Debug \
-  -- --filter-trait "Category=Integration"
-
-# PowerShell
+```powershell
 $env:ASPNETCORE_ENVIRONMENT = "Development"
-dotnet test --project Products.Tests --configuration Debug -- --filter-trait "Category=Integration"
+dotnet build Products.Tests --configuration Debug
+.\Products.Tests\bin\Debug\net10.0\Products.Tests.exe --filter-trait "Category=Integration" --show-live-output on
 ```
 
-> **Data isolation:** integration tests write to the configured `MongoDatabaseName` Mongo database using the `OwnerId` `ProductsWebApplicationFactory.TestUserId` (`00000000-0000-0000-0001-000000000001`) and clean up every document they create in `IAsyncDisposable.DisposeAsync`. Running multiple integration test runs concurrently against the same database is not supported.
-
-### Run all tests
-
-```bash
-ASPNETCORE_ENVIRONMENT=Development \
-dotnet test Products.slnx --configuration Debug
-```
+> **Data isolation:** integration tests write to the configured `MongoDatabaseName` database using `OwnerId` = `ProductsWebApplicationFactory.TestUserId` (`00000000-0000-0000-0001-000000000001`) and clean up every document in `IAsyncDisposable.DisposeAsync`. Concurrent runs against the same database are not supported.
 
 ---
 
@@ -60,7 +44,7 @@ dotnet test Products.slnx --configuration Debug
 
 ### `ProductsWebApplicationFactory`
 
-`WebApplicationFactory<Program>` used by integration tests. Starts the full application with production configuration (real MongoDB via Key Vault credentials). Replaces JWT Bearer authentication with a test scheme so tests can call the API without a real access token.
+`WebApplicationFactory<Program>` used by integration tests. Starts the full `Program.cs` with `ASPNETCORE_ENVIRONMENT=Development`, which selects the non-production branch: User Secrets for MongoDB credentials, ephemeral Data Protection, no Azure credentials. Replaces JWT Bearer authentication with a test scheme so tests can call the API without a real access token.
 
 ### `IntegrationAuthHandler`
 
