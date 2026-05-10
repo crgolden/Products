@@ -23,7 +23,7 @@ No Azure credentials required.
 
 ```powershell
 dotnet build Products.Tests --configuration Debug
-.\Products.Tests\bin\Debug\net10.0\Products.Tests.exe --filter-trait "Category=Unit" --show-live-output on
+.\Products.Tests\bin\Debug\net10.0\Products.Tests.exe -trait "Category=Unit" -showLiveOutput
 ```
 
 ### Integration Tests (require live MongoDB)
@@ -33,7 +33,7 @@ Requires `ASPNETCORE_ENVIRONMENT=Development` and configured User Secrets (`Mong
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT = "Development"
 dotnet build Products.Tests --configuration Debug
-.\Products.Tests\bin\Debug\net10.0\Products.Tests.exe --filter-trait "Category=Integration" --show-live-output on
+.\Products.Tests\bin\Debug\net10.0\Products.Tests.exe -trait "Category=Integration" -showLiveOutput
 ```
 
 > **Data isolation:** integration tests write to the configured `MongoDatabaseName` database using `OwnerId` = `ProductsWebApplicationFactory.TestUserId` (`00000000-0000-0000-0001-000000000001`) and clean up every document in `IAsyncDisposable.DisposeAsync`. Concurrent runs against the same database are not supported.
@@ -103,3 +103,22 @@ The GitHub Actions workflow (`.github/workflows/main_crgolden-products.yml`) run
 4. Publish artifact → deploy to Azure App Service `crgolden-products`
 
 Integration tests are not yet wired into the CI workflow. They run on developer machines against the same MongoDB instance used for development.
+
+---
+
+## Local SonarCloud analysis
+
+Generate coverage first (unit tests only; integration coverage is not collected), then run from `Products/`:
+
+```powershell
+$env:SONAR_TOKEN = "<token>"
+& "$env:SystemDrive\sonar-scanner-8.0.1.6346-windows-x64\bin\sonar-scanner.bat" `
+  "-Dsonar.projectKey=crgolden_Products" `
+  "-Dsonar.organization=crgolden" `
+  "-Dsonar.sources=Products" `
+  "-Dsonar.tests=Products.Tests" `
+  "-Dsonar.exclusions=**/bin/**,**/obj/**" `
+  "-Dsonar.cs.vscoveragexml.reportsPaths=coverage.xml"
+```
+
+Required coverage files: `coverage.xml`.
