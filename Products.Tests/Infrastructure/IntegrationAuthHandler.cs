@@ -6,12 +6,6 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-/// <summary>
-/// Test-only authentication handler for integration tests.
-/// Always authenticates as an integration test user with the <c>products</c> scope.
-/// The <c>sub</c> claim is a Guid string so that the <c>OwnerId</c> filter path in
-/// <see cref="Products.Controllers.ProductsController.Get()"/> is exercised.
-/// </summary>
 internal sealed class IntegrationAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions>
 {
     public IntegrationAuthHandler(
