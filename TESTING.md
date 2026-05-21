@@ -2,6 +2,8 @@
 
 The Products test suite uses xUnit v3 and is split into two tiers: **unit tests** that run on every push with no external dependencies, and **integration tests** that exercise the real MongoDB instance.
 
+Unit test coding standards (MockBehavior.Strict, argument verification, SetupSequence, no control-flow in tests, etc.) are in the workspace-level [Unit Test Standards](../TESTING.md#unit-test-standards).
+
 ## Test tiers
 
 | Tier | Trait | Project | Requires Azure? | Runs in CI |

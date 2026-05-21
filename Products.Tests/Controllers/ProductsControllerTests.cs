@@ -21,14 +21,28 @@ public class ProductsControllerTests
 
     public ProductsControllerTests()
     {
-        _mockCollection = new Mock<IMongoCollection<Product>>();
-        _mockAuthorizationService = new Mock<IAuthorizationService>();
-        var mockDatabase = new Mock<IMongoDatabase>();
+        _mockCollection = new Mock<IMongoCollection<Product>>(MockBehavior.Strict);
+        _mockAuthorizationService = new Mock<IAuthorizationService>(MockBehavior.Strict);
+        var mockDatabase = new Mock<IMongoDatabase>(MockBehavior.Strict);
         mockDatabase
             .Setup(d => d.GetCollection<Product>("Products", null))
             .Returns(_mockCollection.Object);
         _controller = new ProductsController(mockDatabase.Object, _mockAuthorizationService.Object);
     }
+
+    public static TheoryData<Func<ProductsController, Guid, CancellationToken, Task<IActionResult>>> NotFoundOperations() => new()
+    {
+        async (c, id, ct) => await c.Put(id, new Product(), ct),
+        async (c, id, ct) => await c.Patch(id, new Delta<Product>(), ct),
+        async (c, id, ct) => await c.Delete(id, ct),
+    };
+
+    public static TheoryData<Func<ProductsController, Product, CancellationToken, Task<IActionResult>>> ForbidOperations() => new()
+    {
+        async (c, p, ct) => await c.Put(p.Id, new Product(), ct),
+        async (c, p, ct) => await c.Patch(p.Id, new Delta<Product>(), ct),
+        async (c, p, ct) => await c.Delete(p.Id, ct),
+    };
 
     [Fact]
     [Trait("Category", "Unit")]
@@ -76,7 +90,8 @@ public class ProductsControllerTests
     [Trait("Category", "Unit")]
     public async Task Post_CallsInsertOneAsync()
     {
-        _controller.ControllerContext = MakeControllerContext(Guid.NewGuid());
+        var ownerId = Guid.NewGuid();
+        _controller.ControllerContext = MakeControllerContext(ownerId);
         _mockCollection
             .Setup(c => c.InsertOneAsync(
                 It.IsAny<Product>(),
@@ -86,31 +101,35 @@ public class ProductsControllerTests
         await _controller.Post(new Product { Name = "Widget", Price = 1.99m }, TestContext.Current.CancellationToken);
         _mockCollection.Verify(
             c => c.InsertOneAsync(
-                It.IsAny<Product>(),
+                It.Is<Product>(p => p.OwnerId == ownerId && p.Id != Guid.Empty && p.CreatedAt != default),
                 It.IsAny<InsertOneOptions>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
-    [Fact]
+    [Theory]
+    [MemberData(nameof(NotFoundOperations))]
     [Trait("Category", "Unit")]
-    public async Task Put_ReturnsNotFound_WhenProductDoesNotExist()
+    public async Task WriteOperation_ReturnsNotFound_WhenProductDoesNotExist(
+        Func<ProductsController, Guid, CancellationToken, Task<IActionResult>> operation)
     {
         _controller.ControllerContext = MakeControllerContext(Guid.NewGuid());
         SetupFindReturns([]);
-        var result = await _controller.Put(Guid.NewGuid(), new Product(), TestContext.Current.CancellationToken);
+        var result = await operation(_controller, Guid.NewGuid(), TestContext.Current.CancellationToken);
         Assert.IsType<NotFoundResult>(result);
     }
 
-    [Fact]
+    [Theory]
+    [MemberData(nameof(ForbidOperations))]
     [Trait("Category", "Unit")]
-    public async Task Put_ReturnsForbid_WhenNotOwner()
+    public async Task WriteOperation_ReturnsForbid_WhenNotOwner(
+        Func<ProductsController, Product, CancellationToken, Task<IActionResult>> operation)
     {
         _controller.ControllerContext = MakeControllerContext(Guid.NewGuid());
         var existing = MakeProduct(ownerId: Guid.NewGuid());
         SetupFindReturns([existing]);
         SetupAuthorizationFails();
-        var result = await _controller.Put(existing.Id, new Product(), TestContext.Current.CancellationToken);
+        var result = await operation(_controller, existing, TestContext.Current.CancellationToken);
         Assert.IsType<ForbidResult>(result);
     }
 
@@ -147,28 +166,6 @@ public class ProductsControllerTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public async Task Patch_ReturnsNotFound_WhenProductDoesNotExist()
-    {
-        _controller.ControllerContext = MakeControllerContext(Guid.NewGuid());
-        SetupFindReturns([]);
-        var result = await _controller.Patch(Guid.NewGuid(), new Delta<Product>(), TestContext.Current.CancellationToken);
-        Assert.IsType<NotFoundResult>(result);
-    }
-
-    [Fact]
-    [Trait("Category", "Unit")]
-    public async Task Patch_ReturnsForbid_WhenNotOwner()
-    {
-        _controller.ControllerContext = MakeControllerContext(Guid.NewGuid());
-        var existing = MakeProduct(ownerId: Guid.NewGuid());
-        SetupFindReturns([existing]);
-        SetupAuthorizationFails();
-        var result = await _controller.Patch(existing.Id, new Delta<Product>(), TestContext.Current.CancellationToken);
-        Assert.IsType<ForbidResult>(result);
-    }
-
-    [Fact]
-    [Trait("Category", "Unit")]
     public async Task Patch_ReturnsUpdated_AndPreservesOwnerId_WhenOwner()
     {
         var ownerId = Guid.NewGuid();
@@ -194,28 +191,6 @@ public class ProductsControllerTests
                 It.IsAny<ReplaceOptions>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
-    }
-
-    [Fact]
-    [Trait("Category", "Unit")]
-    public async Task Delete_ReturnsNotFound_WhenProductDoesNotExist()
-    {
-        _controller.ControllerContext = MakeControllerContext(Guid.NewGuid());
-        SetupFindReturns([]);
-        var result = await _controller.Delete(Guid.NewGuid(), TestContext.Current.CancellationToken);
-        Assert.IsType<NotFoundResult>(result);
-    }
-
-    [Fact]
-    [Trait("Category", "Unit")]
-    public async Task Delete_ReturnsForbid_WhenNotOwner()
-    {
-        _controller.ControllerContext = MakeControllerContext(Guid.NewGuid());
-        var existing = MakeProduct(ownerId: Guid.NewGuid());
-        SetupFindReturns([existing]);
-        SetupAuthorizationFails();
-        var result = await _controller.Delete(existing.Id, TestContext.Current.CancellationToken);
-        Assert.IsType<ForbidResult>(result);
     }
 
     [Fact]
@@ -279,7 +254,7 @@ public class ProductsControllerTests
 
     private void SetupFindReturns(IList<Product> products)
     {
-        var mockCursor = new Mock<IAsyncCursor<Product>>();
+        var mockCursor = new Mock<IAsyncCursor<Product>>(MockBehavior.Strict);
         mockCursor
             .SetupSequence(c => c.MoveNextAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(products.Count > 0)
@@ -287,6 +262,7 @@ public class ProductsControllerTests
         mockCursor
             .Setup(c => c.Current)
             .Returns(products);
+        mockCursor.Setup(c => c.Dispose());
         _mockCollection
             .Setup(c => c.FindAsync(
                 It.IsAny<FilterDefinition<Product>>(),
