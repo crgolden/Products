@@ -5,16 +5,6 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Products.Tests.Infrastructure;
 
-/// <summary>
-/// Integration tests against the real MongoDB instance.
-/// These tests verify that the <c>BsonClassMap</c> serializer configuration is correct
-/// for all <see cref="Products.Models.Product"/> Guid fields.
-/// </summary>
-/// <remarks>
-/// Requires <c>ASPNETCORE_ENVIRONMENT=Development</c> and a valid <c>az login</c> session
-/// so that <c>Program.cs</c> can read MongoDB credentials from Azure Key Vault.
-/// Each test cleans up any products it creates.
-/// </remarks>
 [Collection(IntegrationCollection.Name)]
 [Trait("Category", "Integration")]
 public sealed class IntegrationProductsTests : IAsyncDisposable
@@ -53,7 +43,6 @@ public sealed class IntegrationProductsTests : IAsyncDisposable
             p.GetProperty("Id").GetString() == productId.ToString());
     }
 
-    /// <inheritdoc/>
     public async ValueTask DisposeAsync()
     {
         foreach (var id in _createdIds)
