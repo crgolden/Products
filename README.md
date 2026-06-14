@@ -1,8 +1,8 @@
+# Products
+
 [![Build and deploy ASP.Net Core app to Azure Web App - crgolden-products](https://github.com/crgolden/Products/actions/workflows/main_crgolden-products.yml/badge.svg)](https://github.com/crgolden/Products/actions/workflows/main_crgolden-products.yml)
 
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=crgolden_Products&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=crgolden_Products)
-
-# Products
 
 ASP.NET Core 10 OData v4 data API managing a `Products` collection in the `crgolden` MongoDB database. Read endpoints are anonymous; write endpoints require a JWT Bearer token with the `products` scope and resource-based ownership. Observable via Azure Monitor and documented via OpenAPI.
 

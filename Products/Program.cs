@@ -90,7 +90,9 @@ try
                     ["deployment.environment"] = builder.Environment.EnvironmentName.ToLowerInvariant()
                 }))
             .WithMetrics(meterProviderBuilder => meterProviderBuilder
-                .AddRuntimeInstrumentation())
+                .AddRuntimeInstrumentation()
+                .AddView(instrument =>
+                    instrument.Meter.Name == "System.Net.Http" ? MetricStreamConfiguration.Drop : null))
             .WithTracing(tracerProviderBuilder => tracerProviderBuilder
                 .SetSampler(new AlwaysOnSampler())
                 .AddSource(nameof(Products))
