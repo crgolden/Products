@@ -211,6 +211,80 @@ public class ProductsControllerTests
         Assert.IsType<NoContentResult>(result);
     }
 
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task Post_WhenModelStateInvalid_ReturnsBadRequest()
+    {
+        _controller.ControllerContext = MakeControllerContext(Guid.NewGuid());
+        _controller.ModelState.AddModelError("Name", "Required");
+        var result = await _controller.Post(new Product(), TestContext.Current.CancellationToken);
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task Put_WhenModelStateInvalid_ReturnsBadRequest()
+    {
+        _controller.ControllerContext = MakeControllerContext(Guid.NewGuid());
+        _controller.ModelState.AddModelError("Name", "Required");
+        var result = await _controller.Put(Guid.NewGuid(), new Product(), TestContext.Current.CancellationToken);
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task Patch_WhenModelStateInvalid_ReturnsBadRequest()
+    {
+        _controller.ControllerContext = MakeControllerContext(Guid.NewGuid());
+        _controller.ModelState.AddModelError("Name", "Required");
+        var result = await _controller.Patch(Guid.NewGuid(), new Delta<Product>(), TestContext.Current.CancellationToken);
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task Delete_WhenModelStateInvalid_ReturnsBadRequest()
+    {
+        _controller.ControllerContext = MakeControllerContext(Guid.NewGuid());
+        _controller.ModelState.AddModelError("Name", "Required");
+        var result = await _controller.Delete(Guid.NewGuid(), TestContext.Current.CancellationToken);
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task Post_WhenSubClaimMissing_SetsOwnerIdToNull()
+    {
+        _controller.ControllerContext = MakeControllerContext(userId: null);
+        _mockCollection
+            .Setup(c => c.InsertOneAsync(
+                It.IsAny<Product>(),
+                It.IsAny<InsertOneOptions>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        var input = new Product { Name = "Widget", Price = 1.99m };
+        await _controller.Post(input, TestContext.Current.CancellationToken);
+        Assert.Null(input.OwnerId);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task Post_WhenSubClaimIsNotValidGuid_SetsOwnerIdToNull()
+    {
+        var identity = new ClaimsIdentity([new Claim("sub", "not-a-guid")], authenticationType: "Bearer");
+        var httpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) };
+        _controller.ControllerContext = new ControllerContext { HttpContext = httpContext };
+        _mockCollection
+            .Setup(c => c.InsertOneAsync(
+                It.IsAny<Product>(),
+                It.IsAny<InsertOneOptions>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        var input = new Product { Name = "Widget", Price = 1.99m };
+        await _controller.Post(input, TestContext.Current.CancellationToken);
+        Assert.Null(input.OwnerId);
+    }
+
     private static Product MakeProduct(Guid? ownerId = null) => new()
     {
         Id = Guid.NewGuid(),
