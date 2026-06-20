@@ -1,15 +1,32 @@
 namespace Products.Tests.Authorization;
 
+using System.Diagnostics;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Products.Authorization;
 using Products.Models;
 
-public class ProductAuthorizationHandlerTests
+public sealed class ProductAuthorizationHandlerTests : IDisposable
 {
     private static readonly OperationAuthorizationRequirement EditRequirement = ProductOperations.Edit;
     private static readonly OperationAuthorizationRequirement DeleteRequirement = ProductOperations.Delete;
+
+    private readonly ActivityListener _activityListener;
+
+    public ProductAuthorizationHandlerTests()
+    {
+        // A listener makes Telemetry.ActivitySource.StartActivity return a non-null Activity, so the
+        // handler's activity?.SetTag(...) branches execute rather than short-circuiting on null.
+        _activityListener = new ActivityListener
+        {
+            ShouldListenTo = _ => true,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+        };
+        ActivitySource.AddActivityListener(_activityListener);
+    }
+
+    public void Dispose() => _activityListener.Dispose();
 
     [Fact]
     [Trait("Category", "Unit")]
@@ -60,6 +77,20 @@ public class ProductAuthorizationHandlerTests
     {
         var product = new Product { OwnerId = Guid.NewGuid() };
         var user = new ClaimsPrincipal(new ClaimsIdentity([], "Bearer"));
+        var context = MakeContext(user, product, EditRequirement);
+        var handler = new ProductAuthorizationHandler();
+
+        await handler.HandleAsync(context);
+
+        Assert.False(context.HasSucceeded);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task HandleRequirementAsync_DoesNotSucceed_WhenSubClaimIsNotAGuid()
+    {
+        var product = new Product { OwnerId = Guid.NewGuid() };
+        var user = new ClaimsPrincipal(new ClaimsIdentity([new Claim("sub", "not-a-guid")], "Bearer"));
         var context = MakeContext(user, product, EditRequirement);
         var handler = new ProductAuthorizationHandler();
 

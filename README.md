@@ -1,8 +1,8 @@
+# Products
+
 [![Build and deploy ASP.Net Core app to Azure Web App - crgolden-products](https://github.com/crgolden/Products/actions/workflows/main_crgolden-products.yml/badge.svg)](https://github.com/crgolden/Products/actions/workflows/main_crgolden-products.yml)
 
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=crgolden_Products&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=crgolden_Products)
-
-# Products
 
 ASP.NET Core 10 OData v4 data API managing a `Products` collection in the `crgolden` MongoDB database. Read endpoints are anonymous; write endpoints require a JWT Bearer token with the `products` scope and resource-based ownership. Observable via Azure Monitor and documented via OpenAPI.
 
@@ -13,8 +13,8 @@ Products is a **resource server** in a five-app system. Reads are public; writes
 | Repo | Role | How Products interacts |
 |---|---|---|
 | [Identity](https://github.com/crgolden/Identity) | OIDC Identity Provider | Issues the access tokens Products validates (scope `products`) |
-| [Experience](https://github.com/crgolden/Experience) | Angular SPA + ASP.NET Core BFF | Sole client today — the BFF proxies authenticated calls to `/odata/Products` and an anonymous public-catalog passthrough |
-| [Manuals](https://github.com/crgolden/Manuals) | Azure OpenAI chat API | Sets the `Product.ManualUrl` field via the chat panel embedded in the Experience product form |
+| [Inventory](https://github.com/crgolden/Inventory) | Angular SPA + ASP.NET Core BFF | Sole client today — the BFF proxies authenticated calls to `/odata/Products` and an anonymous public-catalog passthrough |
+| [Manuals](https://github.com/crgolden/Manuals) | Azure OpenAI chat API | Sets the `Product.ManualUrl` field via the chat panel embedded in the Inventory product form |
 | [Infrastructure](https://github.com/crgolden/Infrastructure) | Health monitoring dashboard | Polls Products' `/health` endpoint |
 
 ## Tech Stack
@@ -38,7 +38,7 @@ Products is a **resource server** in a five-app system. Reads are public; writes
 | `PATCH` | `/odata/Products({key})` | Bearer + `products` + owner | Partially update a product (403 if not owner) |
 | `DELETE` | `/odata/Products({key})` | Bearer + `products` + owner | Delete a product (403 if not owner) |
 
-OIDC tokens are issued by [Identity](https://github.com/crgolden/Identity); the [Experience](https://github.com/crgolden/Experience) BFF forwards them automatically when proxying `/products/api/**`.
+OIDC tokens are issued by [Identity](https://github.com/crgolden/Identity); the [Inventory](https://github.com/crgolden/Inventory) BFF forwards them automatically when proxying `/products/api/**`.
 
 ### OData Query Options (list endpoint)
 
@@ -62,7 +62,7 @@ GET /odata/Products?$filter=Name eq 'Widget'&$orderby=Price desc&$top=10
 | `PurchaseDate` | `DateTimeOffset?` | |
 | `Category` | `string?` | |
 | `Description` | `string?` | |
-| `ManualUrl` | `string?` | Populated from the [Manuals](https://github.com/crgolden/Manuals) chat panel embedded in the [Experience](https://github.com/crgolden/Experience) product form |
+| `ManualUrl` | `string?` | Populated from the [Manuals](https://github.com/crgolden/Manuals) chat panel embedded in the [Inventory](https://github.com/crgolden/Inventory) product form |
 | `OwnerId` | `Guid?` | Server-managed: set on POST from the JWT `sub` claim; never accepted from client input |
 | `CreatedAt` | `DateTimeOffset` | Set on POST, preserved on PUT/PATCH |
 | `UpdatedAt` | `DateTimeOffset?` | Set on PUT/PATCH |

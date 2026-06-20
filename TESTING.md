@@ -100,7 +100,7 @@ The test creates products and deletes them in `DisposeAsync`. Integration tests 
 The GitHub Actions workflow (`.github/workflows/main_crgolden-products.yml`) runs on every push and PR:
 
 1. Build solution (`dotnet build --no-incremental --configuration Release`)
-2. Unit tests with coverage (`dotnet-coverage collect … --filter-trait Category=Unit`)
+2. Unit tests with coverage (`dotnet coverlet … --filter-trait Category=Unit`, OpenCover → `coverage.opencover.xml`)
 3. SonarCloud analysis
 4. Publish artifact → deploy to Azure App Service `crgolden-products`
 
@@ -110,9 +110,21 @@ Integration tests are not yet wired into the CI workflow. They run on developer 
 
 ## Local SonarCloud analysis
 
-Generate coverage first (unit tests only; integration coverage is not collected), then run from `Products/`:
+Generate coverage first, then run from `Products/`. Unit coverage is OpenCover (branch-bearing, via
+`coverlet.console` pinned in `dotnet-tools.json` — restore with `dotnet tool restore`; see the workspace
+`TESTING.md` for the command rationale). Products has no integration/E2E suite, so OpenCover is the only report.
 
 ```powershell
+dotnet build Products.Tests --configuration Release
+dotnet tool restore
+dotnet coverlet Products.Tests\bin\Release\net10.0 `
+  --target "dotnet" `
+  --targetargs "test --project Products.Tests --no-build --configuration Release -- --filter-trait Category=Unit" `
+  --format opencover --output "coverage.opencover.xml" `
+  --skipautoprops --exclude-by-attribute GeneratedCodeAttribute `
+  --exclude-by-file "**/obj/**" --exclude-by-file "**/Program.cs" `
+  --does-not-return-attribute DoesNotReturnAttribute --include "[Products]*"
+
 $env:SONAR_TOKEN = "<token>"
 & "$env:SystemDrive\sonar-scanner-8.0.1.6346-windows-x64\bin\sonar-scanner.bat" `
   "-Dsonar.projectKey=crgolden_Products" `
@@ -120,7 +132,11 @@ $env:SONAR_TOKEN = "<token>"
   "-Dsonar.sources=Products" `
   "-Dsonar.tests=Products.Tests" `
   "-Dsonar.exclusions=**/bin/**,**/obj/**" `
-  "-Dsonar.cs.vscoveragexml.reportsPaths=coverage.xml"
+  "-Dsonar.cs.opencover.reportsPaths=coverage.opencover.xml"
 ```
 
-Required coverage files: `coverage.xml`.
+Required coverage files: `coverage.opencover.xml` (unit, OpenCover).
+
+### When to build a truth table
+
+The coverage **score is read from SonarCloud, never hand-maintained** here. Build a per-method table in `COVERAGE-TRUTH-TABLES.md` only when SonarCloud flags a method with **cognitive complexity > 15 AND uncovered conditions > 0**: the table is escalation for the gnarly few, not a per-class deliverable. See `../DESIGN-LANGUAGE.md` and `../TESTING-COVERAGE.md`.
