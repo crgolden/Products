@@ -79,7 +79,7 @@ Tests the resource-based `ProductAuthorizationHandler` against the `ProductOpera
 
 ### `Models/ProductTests.cs`
 
-Tests the `Product` POCO — default values, nullability, equality semantics, and the `BsonClassMap` registration in `HostApplicationBuilderExtensions.AddPersistenceAsync` (Guid `_id` serialized as string, `OwnerId` Guid serialized as string).
+Tests the `Product` POCO — default values, nullability, equality semantics, and the `BsonClassMap` registration mirrored from `Program.cs` (Guid `_id` serialized as string, `OwnerId` Guid serialized as string).
 
 ---
 

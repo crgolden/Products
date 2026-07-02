@@ -67,6 +67,8 @@ GET /odata/Products?$filter=Name eq 'Widget'&$orderby=Price desc&$top=10
 | `CreatedAt` | `DateTimeOffset` | Set on POST, preserved on PUT/PATCH |
 | `UpdatedAt` | `DateTimeOffset?` | Set on PUT/PATCH |
 
+**Indexes** (created on startup): `Name` (ascending), `CreatedAt` (descending), and `OwnerId` (ascending).
+
 ## Configuration
 
 The following configuration keys are required. In production they are sourced from Azure Key Vault; locally, use [User Secrets](https://learn.microsoft.com/en-us/aspnet/core/security/app-secrets).
@@ -80,8 +82,11 @@ The following configuration keys are required. In production they are sourced fr
 | `MongoDbUsername` | Key Vault secret | MongoDB SCRAM-SHA-256 username |
 | `MongoDbPassword` | Key Vault secret | MongoDB SCRAM-SHA-256 password |
 | `OidcAuthority` | Config | OIDC authority URL for JWT validation |
-| `BlobUri` | Config | Azure Blob Storage URL for data protection keys |
-| `DataProtectionKeyIdentifier` | Config | Azure Key Vault key URI for data protection |
+| `BlobUri` | Config | Azure Blob Storage URL for data protection keys (production only) |
+| `DataProtectionKeyIdentifier` | Config | Azure Key Vault key URI for data protection (production only) |
+| `KeyVaultUri` | Config | Azure Key Vault URI the app reads its secrets from (production only) |
+| `WEBSITE_SITE_NAME` | Config | App Service site name; used as the OpenTelemetry/Serilog service name (production only — App Service sets it automatically) |
+| `AlloyEndpoint` | Config | OTLP endpoint for OpenTelemetry metrics/traces export (production only) |
 | `ElasticsearchNode` | Config | Elasticsearch node URL |
 | `ElasticsearchUsername` | Key Vault secret | Elasticsearch username |
 | `ElasticsearchPassword` | Key Vault secret | Elasticsearch password |

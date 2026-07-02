@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.Security.Claims;
 using Azure.Identity;
-using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Azure.Security.KeyVault.Secrets;
 using Elastic.Ingest.Elasticsearch;
 using Elastic.Ingest.Elasticsearch.DataStreams;
@@ -96,16 +95,17 @@ try
                     ["deployment.environment"] = builder.Environment.EnvironmentName.ToLowerInvariant()
                 }))
             .WithMetrics(meterProviderBuilder => meterProviderBuilder
+                .AddMeter("Microsoft.AspNetCore.Hosting")
                 .AddRuntimeInstrumentation()
-                .AddView(instrument =>
-                    instrument.Meter.Name == "System.Net.Http" ? MetricStreamConfiguration.Drop : null)
                 .AddOtlpExporter(o => o.Endpoint = new Uri(builder.Configuration.GetRequired<string>("AlloyEndpoint"))))
             .WithTracing(tracerProviderBuilder => tracerProviderBuilder
                 .SetSampler(new AlwaysOnSampler())
+                .AddAspNetCoreInstrumentation()
+                .AddHttpClientInstrumentation()
                 .AddSource(nameof(Products))
                 .AddSource("MongoDB.Driver.Core.Extensions.DiagnosticSources")
                 .AddOtlpExporter(o => o.Endpoint = new Uri(builder.Configuration.GetRequired<string>("AlloyEndpoint"))))
-            .UseAzureMonitor().Services
+            .Services
             .AddDataProtection()
             .SetApplicationName(applicationName)
             .PersistKeysToAzureBlobStorage(blobUri, tokenCredential)
