@@ -4,7 +4,7 @@
 
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=crgolden_Products&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=crgolden_Products)
 
-ASP.NET Core 10 OData v4 data API managing a `Products` collection in the `crgolden` MongoDB database. Read endpoints are anonymous; write endpoints require a JWT Bearer token with the `products` scope and resource-based ownership. Observable via Azure Monitor and documented via OpenAPI.
+ASP.NET Core 10 OData v4 data API managing a `Products` collection in the `crgolden` MongoDB database. Read endpoints are anonymous; write endpoints require a JWT Bearer token with the `products` scope and resource-based ownership. Observable via OpenTelemetry (Grafana Alloy) and documented via OpenAPI.
 
 ## Sibling Applications
 
@@ -24,7 +24,8 @@ Products is a **resource server** in a five-app system. Reads are public; writes
 - **OData v4** (`Microsoft.AspNetCore.OData`) — server-side filtering via MongoDB aggregation pipelines
 - **OpenAPI** (`Microsoft.AspNetCore.OpenApi`) — discoverable API contract at `/openapi/v1.json`
 - **JWT Bearer / OIDC** — all endpoints require `scope: products`
-- **Azure** — Key Vault (secrets), Blob Storage (data protection), Azure Monitor (telemetry)
+- **Azure** — Key Vault (secrets), Blob Storage (data protection)
+- **OpenTelemetry** → Grafana Alloy (OTLP traces & metrics)
 - **Serilog** → Elasticsearch (`logs-dotnet-Products` data stream)
 
 ## API Endpoints
