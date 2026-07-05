@@ -96,6 +96,8 @@ jobs:
             /d:sonar.scanner.skipJreProvisioning=true
 
       - name: Build with dotnet
+        env:
+          NuGetPackageSourceCredentials_GitHub: Username=${{ github.actor }};Password=${{ secrets.PACKAGES_READ_TOKEN }}
         run: dotnet build --no-incremental --configuration Release
 
       - name: Run unit tests with coverage
@@ -119,6 +121,8 @@ jobs:
           path: Products.Tests/bin/Release/net10.0/TestResults/
 
       - name: dotnet publish
+        env:
+          NuGetPackageSourceCredentials_GitHub: Username=${{ github.actor }};Password=${{ secrets.PACKAGES_READ_TOKEN }}
         run: >
           dotnet publish Products/Products.csproj
           -c Release
