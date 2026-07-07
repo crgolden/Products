@@ -1,4 +1,4 @@
-namespace Products.Tests.Authorization;
+namespace Products.Tests.Unit.Authorization;
 
 using System.Diagnostics;
 using System.Security.Claims;

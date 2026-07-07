@@ -1,4 +1,4 @@
-namespace Products.Tests.Infrastructure;
+namespace Products.Tests.Unit.Infrastructure;
 
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;

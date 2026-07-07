@@ -107,8 +107,8 @@ dotnet run --project Products/
 curl https://localhost:{port}/openapi/v1.json
 
 # Run unit tests (no Azure creds required)
-dotnet build Products.Tests --configuration Debug
-.\Products.Tests\bin\Debug\net10.0\Products.Tests.exe -trait "Category=Unit" -showLiveOutput
+dotnet build Products.Tests.Unit --configuration Debug
+.\Products.Tests.Unit\bin\Debug\net10.0\Products.Tests.Unit.exe -trait "Category=Unit" -showLiveOutput
 ```
 
 See [TESTING.md](TESTING.md) for the full testing guide — unit tests, integration tests against real MongoDB, and CI pipeline details.

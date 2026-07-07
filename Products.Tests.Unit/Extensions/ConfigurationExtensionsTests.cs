@@ -1,4 +1,4 @@
-namespace Products.Tests.Extensions;
+namespace Products.Tests.Unit.Extensions;
 
 using Microsoft.Extensions.Configuration;
 using Products.Extensions;

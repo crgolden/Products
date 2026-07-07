@@ -8,8 +8,8 @@ Unit test coding standards (MockBehavior.Strict, argument verification, SetupSeq
 
 | Tier | Trait | Project | Requires Azure? | Runs in CI |
 |------|-------|---------|-----------------|------------|
-| Unit | `Category=Unit` | `Products.Tests` | No | Every push/PR |
-| Integration | `Category=Integration` | `Products.Tests` | No — MongoDB credentials from User Secrets; no Azure credentials needed | Local only (not yet in CI) |
+| Unit | `Category=Unit` | `Products.Tests.Unit` | No | Every push/PR |
+| Integration | `Category=Integration` | `Products.Tests.Unit` | No — MongoDB credentials from User Secrets; no Azure credentials needed | Local only (not yet in CI) |
 
 ---
 
@@ -24,8 +24,8 @@ User Secrets ID: `efff68f7-73ce-43f6-9083-6659719fc179`
 No Azure credentials required.
 
 ```powershell
-dotnet build Products.Tests --configuration Debug
-.\Products.Tests\bin\Debug\net10.0\Products.Tests.exe -trait "Category=Unit" -showLiveOutput
+dotnet build Products.Tests.Unit --configuration Debug
+.\Products.Tests.Unit\bin\Debug\net10.0\Products.Tests.Unit.exe -trait "Category=Unit" -showLiveOutput
 ```
 
 ### Integration Tests (require live MongoDB)
@@ -34,8 +34,8 @@ Requires `ASPNETCORE_ENVIRONMENT=Development` and configured User Secrets (`Mong
 
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT = "Development"
-dotnet build Products.Tests --configuration Debug
-.\Products.Tests\bin\Debug\net10.0\Products.Tests.exe -trait "Category=Integration" -showLiveOutput
+dotnet build Products.Tests.Unit --configuration Debug
+.\Products.Tests.Unit\bin\Debug\net10.0\Products.Tests.Unit.exe -trait "Category=Integration" -showLiveOutput
 ```
 
 > **Data isolation:** integration tests write to the configured `MongoDatabaseName` database using `OwnerId` = `ProductsWebApplicationFactory.TestUserId` (`00000000-0000-0000-0001-000000000001`) and clean up every document in `IAsyncDisposable.DisposeAsync`. Concurrent runs against the same database are not supported.
@@ -115,11 +115,11 @@ Generate coverage first, then run from `Products/`. Unit coverage is OpenCover (
 `TESTING.md` for the command rationale). Products has no integration/E2E suite, so OpenCover is the only report.
 
 ```powershell
-dotnet build Products.Tests --configuration Release
+dotnet build Products.Tests.Unit --configuration Release
 dotnet tool restore
-dotnet coverlet Products.Tests\bin\Release\net10.0 `
+dotnet coverlet Products.Tests.Unit\bin\Release\net10.0 `
   --target "dotnet" `
-  --targetargs "test --project Products.Tests --no-build --configuration Release -- --filter-trait Category=Unit" `
+  --targetargs "test --project Products.Tests.Unit --no-build --configuration Release -- --filter-trait Category=Unit" `
   --format opencover --output "coverage.opencover.xml" `
   --skipautoprops --exclude-by-attribute GeneratedCodeAttribute `
   --exclude-by-file "**/obj/**" --exclude-by-file "**/Program.cs" `
@@ -130,7 +130,7 @@ $env:SONAR_TOKEN = "<token>"
   "-Dsonar.projectKey=crgolden_Products" `
   "-Dsonar.organization=crgolden" `
   "-Dsonar.sources=Products" `
-  "-Dsonar.tests=Products.Tests" `
+  "-Dsonar.tests=Products.Tests.Unit" `
   "-Dsonar.exclusions=**/bin/**,**/obj/**" `
   "-Dsonar.cs.opencover.reportsPaths=coverage.opencover.xml"
 ```

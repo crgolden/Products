@@ -1,4 +1,4 @@
-namespace Products.Tests.OpenApi;
+namespace Products.Tests.Unit.OpenApi;
 
 using System.Net.Http;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;

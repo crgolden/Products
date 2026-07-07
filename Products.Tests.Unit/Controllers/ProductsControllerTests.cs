@@ -1,4 +1,4 @@
-namespace Products.Tests.Controllers;
+namespace Products.Tests.Unit.Controllers;
 
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;

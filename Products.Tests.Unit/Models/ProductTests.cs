@@ -1,4 +1,4 @@
-namespace Products.Tests.Models;
+namespace Products.Tests.Unit.Models;
 
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;

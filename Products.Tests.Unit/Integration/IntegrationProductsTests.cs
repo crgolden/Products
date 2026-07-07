@@ -1,9 +1,9 @@
-namespace Products.Tests.Integration;
+namespace Products.Tests.Unit.Integration;
 
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Products.Tests.Infrastructure;
+using Products.Tests.Unit.Infrastructure;
 
 [Collection(IntegrationCollection.Name)]
 [Trait("Category", "Integration")]
