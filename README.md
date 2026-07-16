@@ -26,7 +26,7 @@ Products is a **resource server** in a five-app system. Reads are public; writes
 - **JWT Bearer / OIDC** — all endpoints require `scope: products`
 - **Azure** — Key Vault (secrets), Blob Storage (data protection)
 - **OpenTelemetry** → Grafana Alloy (OTLP traces & metrics)
-- **Serilog** → Elasticsearch (`logs-dotnet-Products` data stream)
+- **Serilog** → Elasticsearch (`logs-app-Products` data stream)
 
 ## API Endpoints
 
