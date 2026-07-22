@@ -85,7 +85,6 @@ The following configuration keys are required. In production they are sourced fr
 | `OidcAuthority` | Config | OIDC authority URL for JWT validation |
 | `BlobUri` | Config | Azure Blob Storage URL for data protection keys (production only) |
 | `DataProtectionKeyIdentifier` | Config | Azure Key Vault key URI for data protection (production only) |
-| `KeyVaultUri` | Config | Azure Key Vault URI the app reads its secrets from (production only) |
 | `WEBSITE_SITE_NAME` | Config | App Service site name; used as the OpenTelemetry/Serilog service name (production only — App Service sets it automatically) |
 | `AlloyEndpoint` | Config | OTLP endpoint for OpenTelemetry metrics/traces export (production only) |
 | `ElasticsearchNode` | Config | Elasticsearch node URL |

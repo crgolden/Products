@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.Security.Claims;
 using Azure.Identity;
-using Azure.Security.KeyVault.Secrets;
 using Elastic.Ingest.Elasticsearch;
 using Elastic.Ingest.Elasticsearch.DataStreams;
 using Elastic.Serilog.Sinks;
@@ -40,7 +39,8 @@ try
     var mongoServerPort = builder.Configuration.GetRequired<int>("MongoServerPort");
     var mongoUseTls = builder.Configuration.GetRequired<bool>("MongoUseTls");
     var oidcAuthority = builder.Configuration.GetRequired<Uri>("OidcAuthority");
-    string mongoDbUsername, mongoDbPassword;
+    string mongoDbUsername = builder.Configuration.GetRequired<string>("MongoDbUsername"),
+        mongoDbPassword = builder.Configuration.GetRequired<string>("MongoDbPassword");
     if (builder.Environment.IsProduction())
     {
         var defaultAzureCredentialOptionsSection = builder.Configuration.GetRequiredSection(nameof(DefaultAzureCredentialOptions));
@@ -48,15 +48,10 @@ try
         var tokenCredential = new DefaultAzureCredential(defaultAzureCredentialOptions);
         Uri blobUri = builder.Configuration.GetRequired<Uri>("BlobUri"),
             dataProtectionKeyIdentifier = builder.Configuration.GetRequired<Uri>("DataProtectionKeyIdentifier"),
-            elasticsearchNode = builder.Configuration.GetRequired<Uri>("ElasticsearchNode"),
-            keyVaultUrl = builder.Configuration.GetRequired<Uri>("KeyVaultUri");
+            elasticsearchNode = builder.Configuration.GetRequired<Uri>("ElasticsearchNode");
         var applicationName = builder.Configuration.GetRequired<string>("WEBSITE_SITE_NAME");
         mongoClientSettings.ApplicationName = applicationName;
         mongoClientSettings.ClusterConfigurator = cb => cb.Subscribe(new DiagnosticsActivityEventSubscriber());
-        var secretClient = new SecretClient(keyVaultUrl, tokenCredential);
-        var secrets = secretClient.GetProductsSecrets();
-        mongoDbUsername = secrets.MongoDbUsername.Value;
-        mongoDbPassword = secrets.MongoDbPassword.Value;
         builder.Services.Configure<AspNetCoreTraceInstrumentationOptions>(options =>
             options.Filter = context => !context.Request.Path.StartsWithSegments("/health", StringComparison.OrdinalIgnoreCase));
         builder.Logging.AddOpenTelemetry(openTelemetryLoggerOptions =>
@@ -64,6 +59,8 @@ try
             openTelemetryLoggerOptions.IncludeFormattedMessage = true;
             openTelemetryLoggerOptions.IncludeScopes = true;
         });
+        var elasticsearchUsername = builder.Configuration.GetRequired<string>("ElasticsearchUsername");
+        var elasticsearchPassword = builder.Configuration.GetRequired<string>("ElasticsearchPassword");
         builder.Services
             .AddSerilog((serviceProvider, loggerConfiguration) => loggerConfiguration
                 .ReadFrom.Configuration(builder.Configuration)
@@ -84,7 +81,7 @@ try
                     },
                     transportConfiguration =>
                     {
-                        var header = new BasicAuthentication(secrets.ElasticsearchUsername.Value, secrets.ElasticsearchPassword.Value);
+                        var header = new BasicAuthentication(elasticsearchUsername, elasticsearchPassword);
                         transportConfiguration.Authentication(header);
                     }))
             .AddOpenTelemetry()
@@ -119,9 +116,6 @@ try
             builder.Configuration.AddUserSecrets("efff68f7-73ce-43f6-9083-6659719fc179");
         }
 
-        var secrets = builder.Configuration.GetProductsSecrets();
-        mongoDbUsername = secrets.MongoDbUsername;
-        mongoDbPassword = secrets.MongoDbPassword;
         builder.Services
             .AddSerilog((serviceProvider, loggerConfiguration) => loggerConfiguration
                 .ReadFrom.Configuration(builder.Configuration)
