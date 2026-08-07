@@ -6,13 +6,11 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Deltas;
 using Microsoft.AspNetCore.OData.Results;
+using MongoDB.Driver;
 using Moq;
 using Products.Controllers;
 using Products.Models;
-using MongoDB.Driver;
 
-// Note: Get() (list) is not unit-tested here because AsQueryable() is a MongoDB driver
-// extension that requires a live session/queryable provider. Cover it with integration tests.
 public class ProductsControllerTests
 {
     private readonly Mock<IMongoCollection<Product>> _mockCollection;

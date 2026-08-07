@@ -2,10 +2,7 @@ namespace Products.Models;
 
 public class Product
 {
-    // Server-managed fields: always set by the controller, never trusted from client input.
-    // S6964 suppressed — nullable is not appropriate for the OData entity key or a timestamp
-    // that must be present on every record.
-#pragma warning disable S6964
+#pragma warning disable S6964 // nullable is not appropriate for the OData entity key or a timestamp that must be present on every record
     public Guid Id { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
@@ -27,10 +24,8 @@ public class Product
 
     public string? Description { get; set; }
 
-    // Will be populated from the Manuals API once a product-manual linking feature is built.
     public string? ManualUrl { get; set; }
 
-    // Server-managed: set on POST from the JWT sub claim; never accepted from client input.
     public Guid? OwnerId { get; set; }
 
     public DateTimeOffset? UpdatedAt { get; set; }

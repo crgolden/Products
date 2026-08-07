@@ -16,8 +16,6 @@ public sealed class ProductAuthorizationHandlerTests : IDisposable
 
     public ProductAuthorizationHandlerTests()
     {
-        // A listener makes Telemetry.ActivitySource.StartActivity return a non-null Activity, so the
-        // handler's activity?.SetTag(...) branches execute rather than short-circuiting on null.
         _activityListener = new ActivityListener
         {
             ShouldListenTo = _ => true,

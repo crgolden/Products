@@ -59,9 +59,6 @@ public class ProductTests
     [Trait("Category", "Unit")]
     public void Product_OwnerId_SerializesToStringGuid_WhenBsonClassMapRegistered()
     {
-        // Mirror the BsonClassMap registration in Program.cs.
-        // Without the NullableSerializer<Guid> on OwnerId, ToBsonDocument() throws:
-        // "GuidSerializer cannot serialize a Guid when GuidRepresentation is Unspecified."
         BsonClassMap.TryRegisterClassMap<Product>(bsonClassMap =>
         {
             bsonClassMap.AutoMap();

@@ -20,21 +20,16 @@ public sealed class IntegrationProductsTests : IAsyncDisposable
     [Fact]
     public async Task Get_FiltersProductsByOwner_WhenAuthenticatedWithGuidSub()
     {
-        // Arrange: create a product so the list is non-trivial.
-        // POST exercises InsertOneAsync with a non-null OwnerId — this also crashes
-        // with "GuidSerializer cannot serialize a Guid when GuidRepresentation is Unspecified"
-        // if OwnerId lacks an explicit serializer in the BsonClassMap registration.
+        // Arrange
         var productId = await CreateProductAsync("Integration Test Product");
         _createdIds.Add(productId);
 
-        // Act: GET /odata/Products as an authenticated user with a valid Guid sub.
-        // This triggers _products.AsQueryable().Where(p => p.OwnerId == ownerId)
-        // in ProductsController.Get(), which serializes the ownerId Guid value.
+        // Act
         var response = await _client.GetAsync(
             "/odata/Products?$orderby=Name",
             TestContext.Current.CancellationToken);
 
-        // Assert: 200 and the created product appears in the response.
+        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>(
             TestContext.Current.CancellationToken);

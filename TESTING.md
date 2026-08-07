@@ -66,7 +66,7 @@ Tests `ProductsController` using a mocked `IMongoCollection<Product>`, mocked `I
 
 | Area | Tests |
 |------|-------|
-| `Get` (list) | Anonymous returns all; authenticated filters by `OwnerId` |
+| `Get` (list) | Not covered here — `AsQueryable()` is a MongoDB driver extension requiring a live session/queryable provider a mock can't satisfy; see `Get_FiltersProductsByOwner_WhenAuthenticatedWithGuidSub` under Integration test coverage below |
 | `Get(key)` | Returns a single product wrapped in `SingleResult` |
 | `Post` | Sets `OwnerId` from `sub` and `CreatedAt`; returns 201 with `Location` |
 | `Put` | Returns 204 on success; 404 if missing; 403 if not owner; preserves `OwnerId` and `CreatedAt` |

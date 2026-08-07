@@ -15,11 +15,9 @@ public sealed class ProductsWebApplicationFactory : WebApplicationFactory<Progra
     {
         builder.ConfigureServices(services =>
         {
-            // Replace JWT Bearer auth with a test scheme that always succeeds.
             services.AddAuthentication(TestScheme)
                 .AddScheme<AuthenticationSchemeOptions, IntegrationAuthHandler>(TestScheme, _ => { });
 
-            // Re-register the Products policy to accept the test scheme's claims.
             services.AddAuthorizationBuilder()
                 .AddPolicy("Products", policy =>
                     policy.RequireAuthenticatedUser().RequireClaim("scope", "products"));

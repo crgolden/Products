@@ -132,7 +132,6 @@ public class ProductsController : ODataController
         var createdAt = existing.CreatedAt;
         delta.Patch(existing);
 
-        // Restore server-managed fields that the Delta must not overwrite.
         existing.OwnerId = ownerId;
         existing.CreatedAt = createdAt;
         existing.UpdatedAt = DateTimeOffset.UtcNow;
