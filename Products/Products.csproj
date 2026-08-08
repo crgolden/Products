@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <RootNamespace>Products</RootNamespace>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <Version>1.0.0.0</Version>
     <UserSecretsId>efff68f7-73ce-43f6-9083-6659719fc179</UserSecretsId>
