@@ -23,6 +23,8 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Products.Authorization;
 using Products.Extensions;
+using Products.HealthChecks;
+using Products.HostedServices;
 using Products.Models;
 using Products.OpenApi;
 using Serilog;
@@ -144,14 +146,7 @@ try
         bsonClassMap.MapIdMember(p => p.Id).SetSerializer(new GuidSerializer(BsonType.String));
         bsonClassMap.MapMember(p => p.OwnerId).SetSerializer(new NullableSerializer<Guid>(new GuidSerializer(BsonType.String)));
     });
-    var mongoCollection = mongoDatabase.GetCollection<Product>("Products");
-    var indexModels = new[]
-    {
-        new CreateIndexModel<Product>(Builders<Product>.IndexKeys.Ascending(p => p.Name)),
-        new CreateIndexModel<Product>(Builders<Product>.IndexKeys.Descending(p => p.CreatedAt)),
-        new CreateIndexModel<Product>(Builders<Product>.IndexKeys.Ascending(p => p.OwnerId)),
-    };
-    await mongoCollection.Indexes.CreateManyAsync(indexModels);
+    builder.Services.AddHostedService<ProductIndexInitializer>();
     builder.Services.AddControllers().AddOData(oDataOptions =>
     {
         var modelBuilder = new ODataConventionModelBuilder();
@@ -166,7 +161,8 @@ try
         oDataOptions.AddRouteComponents("odata", model);
     }).Services
         .AddEndpointsApiExplorer()
-        .AddHealthChecks().Services
+        .AddHealthChecks()
+        .AddCheck<MongoDbHealthCheck>("MongoDB", tags: ["database"]).Services
         .AddAuthentication()
         .AddJwtBearer(jwtBearerOptions =>
         {
