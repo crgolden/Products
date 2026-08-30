@@ -15,7 +15,7 @@ Unit test coding standards (MockBehavior.Strict, argument verification, SetupSeq
 
 ## Running Tests Locally
 
-For the `.NET 10 SDK xUnit caveat` (why `dotnet test` doesn't work) and `ASPNETCORE_ENVIRONMENT` discipline, see the workspace-level [TESTING.md](../AGENTS/TESTING.md).
+For running tests (`dotnet test` from the repo root — never the workspace root) and `ASPNETCORE_ENVIRONMENT` discipline, see the workspace-level [TESTING.md](../AGENTS/TESTING.md).
 
 User Secrets ID: `efff68f7-73ce-43f6-9083-6659719fc179`
 
