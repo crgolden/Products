@@ -63,7 +63,7 @@ GET /odata/Products?$filter=Name eq 'Widget'&$orderby=Price desc&$top=10
 | `PurchaseDate` | `DateTimeOffset?` | |
 | `Category` | `string?` | |
 | `Description` | `string?` | |
-| `ManualUrl` | `Uri?` | Populated from the [Manuals](https://github.com/crgolden/Manuals) chat panel embedded in the [Inventory](https://github.com/crgolden/Inventory) product form. Serialized to BSON and OData as a string, so stored documents and API payloads are unchanged |
+| `ManualUrl` | `string?` | Populated from the [Manuals](https://github.com/crgolden/Manuals) chat panel embedded in the [Inventory](https://github.com/crgolden/Inventory) product form. **`string` is the OData representation of a URL, not a weaker stand-in for `Uri`:** the Core vocabulary's `IsURL` term carries `Core.RequiresType = Edm.String`, so a URL property is a string by specification. A `Uri` here has no EDM primitive to map to and becomes a complex type exposing only `Segments` — no scheme, no host, and immutable so no write can deserialize it |
 | `OwnerId` | `Guid?` | Server-managed: set on POST from the JWT `sub` claim; never accepted from client input |
 | `CreatedAt` | `DateTimeOffset` | Set on POST, preserved on PUT/PATCH |
 | `UpdatedAt` | `DateTimeOffset?` | Set on PUT/PATCH |

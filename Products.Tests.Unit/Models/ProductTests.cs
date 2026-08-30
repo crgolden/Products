@@ -1,5 +1,7 @@
 namespace Products.Tests.Unit.Models;
 
+using Microsoft.OData.Edm;
+using Microsoft.OData.ModelBuilder;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using Products.Models;
@@ -74,7 +76,7 @@ public class ProductTests
     {
         ProductClassMap.Register();
 
-        var manualUrl = new Uri($"https://example.invalid/manuals/{Guid.NewGuid():N}.pdf");
+        var manualUrl = $"https://example.invalid/manuals/{Guid.NewGuid():N}.pdf";
         var product = new Product { Id = Guid.NewGuid(), ManualUrl = manualUrl };
 
         var restored = BsonSerializer.Deserialize<Product>(product.ToBsonDocument());
@@ -84,17 +86,51 @@ public class ProductTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public void Product_ManualUrl_ReadsADocumentWrittenWhenTheMemberWasAString()
+    public void Product_ManualUrl_ReadsADocumentWrittenWhileTheMemberWasAUri()
     {
         ProductClassMap.Register();
 
-        var storedUrl = $"https://example.invalid/manuals/{Guid.NewGuid():N}.pdf";
-        var writtenBeforeTheTypeChanged = new Product { Id = Guid.NewGuid() }.ToBsonDocument();
-        writtenBeforeTheTypeChanged[nameof(Product.ManualUrl)] = storedUrl;
+        var writtenByTheUriTypedBuild = new Product { Id = Guid.NewGuid() }.ToBsonDocument();
+        var storedUrl = new Uri($"https://example.invalid/manuals/{Guid.NewGuid():N}.pdf").AbsoluteUri;
+        writtenByTheUriTypedBuild[nameof(Product.ManualUrl)] = storedUrl;
 
-        var restored = BsonSerializer.Deserialize<Product>(writtenBeforeTheTypeChanged);
+        var restored = BsonSerializer.Deserialize<Product>(writtenByTheUriTypedBuild);
 
-        Assert.Equal(new Uri(storedUrl), restored.ManualUrl);
+        Assert.Equal(storedUrl, restored.ManualUrl);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void Product_ManualUrl_IsStoredAsABsonString_NotANestedDocument()
+    {
+        ProductClassMap.Register();
+
+        var manualUrl = $"https://example.invalid/manuals/{Guid.NewGuid():N}.pdf";
+        var product = new Product { Id = Guid.NewGuid(), ManualUrl = manualUrl };
+
+        var document = product.ToBsonDocument();
+
+        Assert.Equal(BsonType.String, document[nameof(Product.ManualUrl)].BsonType);
+        Assert.Equal(manualUrl, document[nameof(Product.ManualUrl)].AsString);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void Product_ManualUrl_IsDeclaredAsAnEdmString_SoAClientCanSendAUrl()
+    {
+        var modelBuilder = new ODataConventionModelBuilder();
+        modelBuilder.EntitySet<Product>("Products");
+
+        var model = modelBuilder.GetEdmModel();
+        var entity = Assert.IsAssignableFrom<IEdmEntityType>(
+            model.FindDeclaredType($"{typeof(Product).Namespace}.{nameof(Product)}"));
+        var manualUrl = Assert.IsAssignableFrom<IEdmStructuralProperty>(entity.FindProperty(nameof(Product.ManualUrl)));
+
+        var kind = manualUrl.Type.Definition.AsElementType() is IEdmPrimitiveType primitive
+            ? primitive.PrimitiveKind
+            : EdmPrimitiveTypeKind.None;
+
+        Assert.Equal(EdmPrimitiveTypeKind.String, kind);
     }
 
     [Fact]

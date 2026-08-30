@@ -24,7 +24,7 @@ public class Product
 
     public string? Description { get; set; }
 
-    public Uri? ManualUrl { get; set; }
+    public string? ManualUrl { get; set; }
 
     public Guid? OwnerId { get; set; }
 

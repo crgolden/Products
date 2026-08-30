@@ -303,3 +303,6 @@ dotnet_diagnostic.CA1309.severity = warning
 dotnet_diagnostic.CA1310.severity = warning
 dotnet_diagnostic.CA1862.severity = warning
 dotnet_diagnostic.CA1308.severity = none  # AGENTS/TELEMETRY.md fixes deployment.environment as a lowercase wire value
+
+[Products/Models/*.cs]
+dotnet_diagnostic.CA1056.severity = none  # OData's Core vocabulary requires Edm.String for a URL (IsURL carries Core.RequiresType = Edm.String); CA1056's Uri fix has no EDM primitive and becomes a complex type exposing only Segments, which 400'd every PATCH in production
