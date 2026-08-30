@@ -95,6 +95,7 @@ try
                 }))
             .WithMetrics(meterProviderBuilder => meterProviderBuilder
                 .AddMeter("Microsoft.AspNetCore.Hosting")
+                .AddMeter(nameof(Products))
                 .AddRuntimeInstrumentation()
                 .AddOtlpExporter(o => o.Endpoint = new Uri(builder.Configuration.GetRequired<string>("AlloyEndpoint"))))
             .WithTracing(tracerProviderBuilder => tracerProviderBuilder
@@ -140,12 +141,7 @@ try
     builder.Services.AddSingleton<IMongoClient>(mongoClient);
     var mongoDatabase = mongoClient.GetDatabase(mongoDatabaseName);
     builder.Services.AddSingleton(mongoDatabase);
-    BsonClassMap.TryRegisterClassMap<Product>(bsonClassMap =>
-    {
-        bsonClassMap.AutoMap();
-        bsonClassMap.MapIdMember(p => p.Id).SetSerializer(new GuidSerializer(BsonType.String));
-        bsonClassMap.MapMember(p => p.OwnerId).SetSerializer(new NullableSerializer<Guid>(new GuidSerializer(BsonType.String)));
-    });
+    ProductClassMap.Register();
     builder.Services.AddHostedService<ProductIndexInitializer>();
     builder.Services.AddControllers().AddOData(oDataOptions =>
     {

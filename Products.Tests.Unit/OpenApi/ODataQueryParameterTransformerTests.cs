@@ -42,13 +42,13 @@ public sealed class ODataQueryParameterTransformerTests
         var parameters = document.Paths?["/odata/Products"]?.Operations?[HttpMethod.Get]?.Parameters;
         Assert.NotNull(parameters);
         Assert.Equal(7, parameters.Count);
-        Assert.Contains(parameters, p => p.Name == "$filter");
-        Assert.Contains(parameters, p => p.Name == "$select");
-        Assert.Contains(parameters, p => p.Name == "$orderby");
-        Assert.Contains(parameters, p => p.Name == "$top");
-        Assert.Contains(parameters, p => p.Name == "$skip");
-        Assert.Contains(parameters, p => p.Name == "$count");
-        Assert.Contains(parameters, p => p.Name == "$expand");
+        Assert.Contains(parameters, p => string.Equals(p.Name, "$filter", StringComparison.Ordinal));
+        Assert.Contains(parameters, p => string.Equals(p.Name, "$select", StringComparison.Ordinal));
+        Assert.Contains(parameters, p => string.Equals(p.Name, "$orderby", StringComparison.Ordinal));
+        Assert.Contains(parameters, p => string.Equals(p.Name, "$top", StringComparison.Ordinal));
+        Assert.Contains(parameters, p => string.Equals(p.Name, "$skip", StringComparison.Ordinal));
+        Assert.Contains(parameters, p => string.Equals(p.Name, "$count", StringComparison.Ordinal));
+        Assert.Contains(parameters, p => string.Equals(p.Name, "$expand", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -61,12 +61,14 @@ public sealed class ODataQueryParameterTransformerTests
 
         var singlePath = document.Paths?["/odata/Products({key})"];
         Assert.NotNull(singlePath);
-        Assert.Contains(singlePath.Parameters ?? [], p => p.Name == "key" && p.In == ParameterLocation.Path);
+        Assert.Contains(
+            singlePath.Parameters ?? [],
+            p => string.Equals(p.Name, "key", StringComparison.Ordinal) && p.In == ParameterLocation.Path);
         var queryParams = singlePath.Operations?[HttpMethod.Get]?.Parameters;
         Assert.NotNull(queryParams);
         Assert.Equal(2, queryParams.Count);
-        Assert.Contains(queryParams, p => p.Name == "$select");
-        Assert.Contains(queryParams, p => p.Name == "$expand");
+        Assert.Contains(queryParams, p => string.Equals(p.Name, "$select", StringComparison.Ordinal));
+        Assert.Contains(queryParams, p => string.Equals(p.Name, "$expand", StringComparison.Ordinal));
     }
 
     [Fact]

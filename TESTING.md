@@ -79,7 +79,9 @@ Tests the resource-based `ProductAuthorizationHandler` against the `ProductOpera
 
 ### `Models/ProductTests.cs`
 
-Tests the `Product` POCO — default values, nullability, equality semantics, and the `BsonClassMap` registration mirrored from `Program.cs` (Guid `_id` serialized as string, `OwnerId` Guid serialized as string).
+Tests the `Product` POCO — default values, nullability, equality semantics — and the real `BsonClassMap` registration by calling `ProductClassMap.Register()`, the same method `Program.cs` calls (Guid `_id` serialized as string, `OwnerId` Guid serialized as string, `ManualUrl` round-tripping as a `Uri`).
+
+**These tests previously declared their own copy of the class map and so proved nothing about the app** — deleting the registration from `Program.cs` left them green. The registration is now a single method in the production assembly; removing its serializers turns four of these tests red with the exact production failure (`GuidSerializer cannot serialize a Guid when GuidRepresentation is Unspecified`). Never re-inline a class map into a test.
 
 ---
 
@@ -89,7 +91,7 @@ Tests the `Product` POCO — default values, nullability, equality semantics, an
 
 | Test | What it verifies |
 |------|-----------------|
-| `Get_FiltersProductsByOwner_WhenAuthenticatedWithGuidSub` | `POST /odata/Products` then `GET /odata/Products?$orderby=Name` round-trip succeeds against real MongoDB. Catches `BsonClassMap` Guid serialization regressions ("`GuidSerializer cannot serialize a Guid when GuidRepresentation is Unspecified`") that unit tests with mocked `IMongoCollection<Product>` cannot detect. |
+| `Get_FiltersProductsByOwner_WhenAuthenticatedWithGuidSub` | `POST /odata/Products` then `GET /odata/Products?$orderby=Name` round-trip succeeds against real MongoDB. Covers the wiring the unit tier cannot reach — that `Program.cs` actually calls the registration, that the OData model and the collection agree, and that the driver talks to a real server. **The `BsonClassMap` Guid serialization regression itself is now caught in the unit tier** (`Models/ProductTests.cs`), proven by removing the serializers and watching four unit tests fail; this test is no longer the only thing standing between that defect and production. |
 
 The test creates products and deletes them in `DisposeAsync`. Integration tests target the same MongoDB database used in development; do not run against a production database.
 

@@ -2,7 +2,6 @@ namespace Products.Tests.Unit.Models;
 
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
-using MongoDB.Bson.Serialization.Serializers;
 using Products.Models;
 
 public class ProductTests
@@ -59,19 +58,54 @@ public class ProductTests
     [Trait("Category", "Unit")]
     public void Product_OwnerId_SerializesToStringGuid_WhenBsonClassMapRegistered()
     {
-        BsonClassMap.TryRegisterClassMap<Product>(bsonClassMap =>
-        {
-            bsonClassMap.AutoMap();
-            bsonClassMap.MapIdMember(p => p.Id).SetSerializer(new GuidSerializer(BsonType.String));
-            bsonClassMap.MapMember(p => p.OwnerId).SetSerializer(new NullableSerializer<Guid>(new GuidSerializer(BsonType.String)));
-        });
+        ProductClassMap.Register();
 
         var ownerId = Guid.NewGuid();
         var product = new Product { Id = Guid.NewGuid(), OwnerId = ownerId };
         var document = product.ToBsonDocument();
 
-        Assert.Equal(BsonType.String, document["OwnerId"].BsonType);
-        Assert.Equal(ownerId.ToString(), document["OwnerId"].AsString);
+        Assert.Equal(BsonType.String, document[nameof(Product.OwnerId)].BsonType);
+        Assert.Equal(ownerId.ToString(), document[nameof(Product.OwnerId)].AsString);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void Product_ManualUrl_RoundTripsThroughBson_WhenBsonClassMapRegistered()
+    {
+        ProductClassMap.Register();
+
+        var manualUrl = new Uri($"https://example.invalid/manuals/{Guid.NewGuid():N}.pdf");
+        var product = new Product { Id = Guid.NewGuid(), ManualUrl = manualUrl };
+
+        var restored = BsonSerializer.Deserialize<Product>(product.ToBsonDocument());
+
+        Assert.Equal(manualUrl, restored.ManualUrl);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void Product_ManualUrl_ReadsADocumentWrittenWhenTheMemberWasAString()
+    {
+        ProductClassMap.Register();
+
+        var storedUrl = $"https://example.invalid/manuals/{Guid.NewGuid():N}.pdf";
+        var writtenBeforeTheTypeChanged = new Product { Id = Guid.NewGuid() }.ToBsonDocument();
+        writtenBeforeTheTypeChanged[nameof(Product.ManualUrl)] = storedUrl;
+
+        var restored = BsonSerializer.Deserialize<Product>(writtenBeforeTheTypeChanged);
+
+        Assert.Equal(new Uri(storedUrl), restored.ManualUrl);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void Product_ManualUrl_RoundTripsAsNull_WhenUnset()
+    {
+        ProductClassMap.Register();
+
+        var restored = BsonSerializer.Deserialize<Product>(new Product { Id = Guid.NewGuid() }.ToBsonDocument());
+
+        Assert.Null(restored.ManualUrl);
     }
 
     [Fact]

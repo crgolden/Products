@@ -178,14 +178,16 @@ public class ProductsControllerTests
                 It.IsAny<ReplaceOptions>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ReplaceOneResult.Acknowledged(1, 1, null));
+        var patchedProductName = $"patched-{Guid.NewGuid()}";
         var delta = new Delta<Product>();
-        delta.TrySetPropertyValue(nameof(Product.Name), "Patched");
+        delta.TrySetPropertyValue(nameof(Product.Name), patchedProductName);
         var result = await _controller.Patch(existing.Id, delta, TestContext.Current.CancellationToken);
         Assert.IsType<UpdatedODataResult<Product>>(result);
         _mockCollection.Verify(
             c => c.ReplaceOneAsync(
                 It.IsAny<FilterDefinition<Product>>(),
-                It.Is<Product>(p => p.Name == "Patched" && p.OwnerId == ownerId),
+                It.Is<Product>(p =>
+                    string.Equals(p.Name, patchedProductName, StringComparison.Ordinal) && p.OwnerId == ownerId),
                 It.IsAny<ReplaceOptions>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);

@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.OData.Deltas;
 using Microsoft.AspNetCore.OData.Query;
 using Microsoft.AspNetCore.OData.Results;
 using Microsoft.AspNetCore.OData.Routing.Controllers;
+using HostedServices;
 using Models;
 using MongoDB.AspNetCore.OData;
 using MongoDB.Driver;
@@ -19,7 +20,7 @@ public class ProductsController : ODataController
 
     public ProductsController(IMongoDatabase database, IAuthorizationService authorizationService)
     {
-        _products = database.GetCollection<Product>("Products");
+        _products = database.GetCollection<Product>(ProductIndexInitializer.CollectionName);
         _authorizationService = authorizationService;
     }
 
