@@ -25,10 +25,10 @@ public sealed class ODataQueryParameterTransformerTests
 
         await transformer.TransformAsync(document, Context, CancellationToken.None);
 
-        Assert.True(document.Components?.SecuritySchemes?.ContainsKey("Bearer") == true);
-        Assert.True(document.Security?.Count == 1);
-        Assert.True(document.Paths?.ContainsKey("/odata/Products") == true);
-        Assert.True(document.Paths?.ContainsKey("/odata/Products({key})") == true);
+        Assert.True(document.Components?.SecuritySchemes?.ContainsKey("Bearer"));
+        Assert.Equal(1, document.Security?.Count);
+        Assert.True(document.Paths?.ContainsKey("/odata/Products"));
+        Assert.True(document.Paths?.ContainsKey("/odata/Products({key})"));
     }
 
     [Fact]
@@ -95,8 +95,8 @@ public sealed class ODataQueryParameterTransformerTests
 
         await transformer.TransformAsync(document, Context, CancellationToken.None);
 
-        Assert.True(document.Components.SecuritySchemes.Count == 1);
-        Assert.True(document.Security.Count == 1);
+        Assert.Single(document.Components.SecuritySchemes);
+        Assert.Single(document.Security);
     }
 
     [Fact]

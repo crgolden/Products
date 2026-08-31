@@ -5,6 +5,7 @@ using Microsoft.OData.ModelBuilder;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using Products.Models;
+using Products.Tests.Unit.TestSupport;
 
 public class ProductTests
 {
@@ -63,7 +64,8 @@ public class ProductTests
         ProductClassMap.Register();
 
         var ownerId = Guid.NewGuid();
-        var product = new Product { Id = Guid.NewGuid(), OwnerId = ownerId };
+        var productId = Guid.NewGuid();
+        var product = new Product { Id = productId, OwnerId = ownerId };
         var document = product.ToBsonDocument();
 
         Assert.Equal(BsonType.String, document[nameof(Product.OwnerId)].BsonType);
@@ -77,7 +79,8 @@ public class ProductTests
         ProductClassMap.Register();
 
         var manualUrl = $"https://example.invalid/manuals/{Guid.NewGuid():N}.pdf";
-        var product = new Product { Id = Guid.NewGuid(), ManualUrl = manualUrl };
+        var productId = Guid.NewGuid();
+        var product = new Product { Id = productId, ManualUrl = manualUrl };
 
         var restored = BsonSerializer.Deserialize<Product>(product.ToBsonDocument());
 
@@ -90,7 +93,8 @@ public class ProductTests
     {
         ProductClassMap.Register();
 
-        var writtenByTheUriTypedBuild = new Product { Id = Guid.NewGuid() }.ToBsonDocument();
+        var productId = Guid.NewGuid();
+        var writtenByTheUriTypedBuild = new Product { Id = productId }.ToBsonDocument();
         var storedUrl = new Uri($"https://example.invalid/manuals/{Guid.NewGuid():N}.pdf").AbsoluteUri;
         writtenByTheUriTypedBuild[nameof(Product.ManualUrl)] = storedUrl;
 
@@ -106,7 +110,8 @@ public class ProductTests
         ProductClassMap.Register();
 
         var manualUrl = $"https://example.invalid/manuals/{Guid.NewGuid():N}.pdf";
-        var product = new Product { Id = Guid.NewGuid(), ManualUrl = manualUrl };
+        var productId = Guid.NewGuid();
+        var product = new Product { Id = productId, ManualUrl = manualUrl };
 
         var document = product.ToBsonDocument();
 
@@ -122,9 +127,12 @@ public class ProductTests
         modelBuilder.EntitySet<Product>("Products");
 
         var model = modelBuilder.GetEdmModel();
-        var entity = Assert.IsAssignableFrom<IEdmEntityType>(
-            model.FindDeclaredType($"{typeof(Product).Namespace}.{nameof(Product)}"));
-        var manualUrl = Assert.IsAssignableFrom<IEdmStructuralProperty>(entity.FindProperty(nameof(Product.ManualUrl)));
+        var entity = Assert.IsType<IEdmEntityType>(
+            model.FindDeclaredType($"{typeof(Product).Namespace}.{nameof(Product)}"),
+            exactMatch: false);
+        var manualUrl = Assert.IsType<IEdmStructuralProperty>(
+            entity.FindProperty(nameof(Product.ManualUrl)),
+            exactMatch: false);
 
         var kind = manualUrl.Type.Definition.AsElementType() is IEdmPrimitiveType primitive
             ? primitive.PrimitiveKind
@@ -139,7 +147,8 @@ public class ProductTests
     {
         ProductClassMap.Register();
 
-        var restored = BsonSerializer.Deserialize<Product>(new Product { Id = Guid.NewGuid() }.ToBsonDocument());
+        var productId = Guid.NewGuid();
+        var restored = BsonSerializer.Deserialize<Product>(new Product { Id = productId }.ToBsonDocument());
 
         Assert.Null(restored.ManualUrl);
     }
@@ -148,20 +157,22 @@ public class ProductTests
     [Trait("Category", "Unit")]
     public void Product_CanSetProperties()
     {
-        var id = Guid.NewGuid();
+        var productId = Guid.NewGuid();
+        var productName = TestValues.NewProductName();
+        var price = TestValues.NewPrice();
         var now = DateTimeOffset.UtcNow;
         var product = new Product
         {
-            Id = id,
-            Name = "Widget",
-            Price = 9.99m,
+            Id = productId,
+            Name = productName,
+            Price = price,
             CreatedAt = now,
             UpdatedAt = now,
         };
 
-        Assert.Equal(id, product.Id);
-        Assert.Equal("Widget", product.Name);
-        Assert.Equal(9.99m, product.Price);
+        Assert.Equal(productId, product.Id);
+        Assert.Equal(productName, product.Name);
+        Assert.Equal(price, product.Price);
         Assert.Equal(now, product.CreatedAt);
         Assert.Equal(now, product.UpdatedAt);
     }

@@ -10,6 +10,7 @@ using MongoDB.Driver;
 using Moq;
 using Products.Controllers;
 using Products.Models;
+using Products.Tests.Unit.TestSupport;
 
 public class ProductsControllerTests
 {
@@ -28,26 +29,27 @@ public class ProductsControllerTests
         _controller = new ProductsController(mockDatabase.Object, _mockAuthorizationService.Object);
     }
 
-    public static TheoryData<Func<ProductsController, Guid, CancellationToken, Task<IActionResult>>> NotFoundOperations() => new()
+    public enum WriteOperation
     {
-        async (c, id, ct) => await c.Put(id, new Product(), ct),
-        async (c, id, ct) => await c.Patch(id, new Delta<Product>(), ct),
-        async (c, id, ct) => await c.Delete(id, ct),
-    };
+        Put,
+        Patch,
+        Delete,
+    }
 
-    public static TheoryData<Func<ProductsController, Product, CancellationToken, Task<IActionResult>>> ForbidOperations() => new()
+    public static TheoryData<WriteOperation> WriteOperations() => new()
     {
-        async (c, p, ct) => await c.Put(p.Id, new Product(), ct),
-        async (c, p, ct) => await c.Patch(p.Id, new Delta<Product>(), ct),
-        async (c, p, ct) => await c.Delete(p.Id, ct),
+        WriteOperation.Put,
+        WriteOperation.Patch,
+        WriteOperation.Delete,
     };
 
     [Fact]
     [Trait("Category", "Unit")]
     public async Task GetByKey_ReturnsEmptySingleResult_WhenProductDoesNotExist()
     {
+        var missingProductId = Guid.NewGuid();
         SetupFindReturns([]);
-        var result = await _controller.Get(Guid.NewGuid(), TestContext.Current.CancellationToken);
+        var result = await _controller.Get(missingProductId, TestContext.Current.CancellationToken);
         Assert.Empty(result.Queryable);
     }
 
@@ -59,8 +61,8 @@ public class ProductsControllerTests
         SetupFindReturns([product]);
         var result = await _controller.Get(product.Id, TestContext.Current.CancellationToken);
         Assert.IsType<SingleResult<Product>>(result);
-        Assert.Single(result.Queryable);
-        Assert.Equal(product.Id, result.Queryable.First().Id);
+        var onlyProduct = Assert.Single(result.Queryable);
+        Assert.Equal(product.Id, onlyProduct.Id);
     }
 
     [Fact]
@@ -75,7 +77,7 @@ public class ProductsControllerTests
                 It.IsAny<InsertOneOptions>(),
                 It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-        var input = new Product { Name = "Widget", Price = 1.99m };
+        var input = new Product { Name = TestValues.NewProductName(), Price = TestValues.NewPrice() };
         var result = await _controller.Post(input, TestContext.Current.CancellationToken);
         Assert.IsType<CreatedODataResult<Product>>(result);
         Assert.NotEqual(Guid.Empty, input.Id);
@@ -96,7 +98,8 @@ public class ProductsControllerTests
                 It.IsAny<InsertOneOptions>(),
                 It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-        await _controller.Post(new Product { Name = "Widget", Price = 1.99m }, TestContext.Current.CancellationToken);
+        var input = new Product { Name = TestValues.NewProductName(), Price = TestValues.NewPrice() };
+        await _controller.Post(input, TestContext.Current.CancellationToken);
         _mockCollection.Verify(
             c => c.InsertOneAsync(
                 It.Is<Product>(p => p.OwnerId == ownerId && p.Id != Guid.Empty && p.CreatedAt != default),
@@ -106,28 +109,32 @@ public class ProductsControllerTests
     }
 
     [Theory]
-    [MemberData(nameof(NotFoundOperations))]
+    [MemberData(nameof(WriteOperations))]
     [Trait("Category", "Unit")]
-    public async Task WriteOperation_ReturnsNotFound_WhenProductDoesNotExist(
-        Func<ProductsController, Guid, CancellationToken, Task<IActionResult>> operation)
+    public async Task WriteOperation_ReturnsNotFound_WhenProductDoesNotExist(WriteOperation operation)
     {
-        _controller.ControllerContext = MakeControllerContext(Guid.NewGuid());
+        var signedInOwnerId = Guid.NewGuid();
+        var missingProductId = Guid.NewGuid();
+        _controller.ControllerContext = MakeControllerContext(signedInOwnerId);
         SetupFindReturns([]);
-        var result = await operation(_controller, Guid.NewGuid(), TestContext.Current.CancellationToken);
+        var result = await InvokeWriteAsync(
+            operation, _controller, missingProductId, TestContext.Current.CancellationToken);
         Assert.IsType<NotFoundResult>(result);
     }
 
     [Theory]
-    [MemberData(nameof(ForbidOperations))]
+    [MemberData(nameof(WriteOperations))]
     [Trait("Category", "Unit")]
-    public async Task WriteOperation_ReturnsForbid_WhenNotOwner(
-        Func<ProductsController, Product, CancellationToken, Task<IActionResult>> operation)
+    public async Task WriteOperation_ReturnsForbid_WhenNotOwner(WriteOperation operation)
     {
-        _controller.ControllerContext = MakeControllerContext(Guid.NewGuid());
-        var existing = MakeProduct(ownerId: Guid.NewGuid());
+        var signedInViewerId = Guid.NewGuid();
+        var otherOwnerId = Guid.NewGuid();
+        _controller.ControllerContext = MakeControllerContext(signedInViewerId);
+        var existing = MakeProduct(ownerId: otherOwnerId);
         SetupFindReturns([existing]);
         SetupAuthorizationFails();
-        var result = await operation(_controller, existing, TestContext.Current.CancellationToken);
+        var result = await InvokeWriteAsync(
+            operation, _controller, existing.Id, TestContext.Current.CancellationToken);
         Assert.IsType<ForbidResult>(result);
     }
 
@@ -147,7 +154,7 @@ public class ProductsControllerTests
                 It.IsAny<ReplaceOptions>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ReplaceOneResult.Acknowledged(1, 1, null));
-        var update = new Product { Name = "Updated", Price = 5.00m };
+        var update = new Product { Name = TestValues.NewProductName(), Price = TestValues.NewPrice() };
         var result = await _controller.Put(existing.Id, update, TestContext.Current.CancellationToken);
         Assert.IsType<UpdatedODataResult<Product>>(result);
         _mockCollection.Verify(
@@ -215,8 +222,9 @@ public class ProductsControllerTests
     [Trait("Category", "Unit")]
     public async Task Post_WhenModelStateInvalid_ReturnsBadRequest()
     {
-        _controller.ControllerContext = MakeControllerContext(Guid.NewGuid());
-        _controller.ModelState.AddModelError("Name", "Required");
+        var signedInOwnerId = Guid.NewGuid();
+        _controller.ControllerContext = MakeControllerContext(signedInOwnerId);
+        _controller.ModelState.AddModelError(nameof(Product.Name), TestValues.NewModelErrorMessage());
         var result = await _controller.Post(new Product(), TestContext.Current.CancellationToken);
         Assert.IsType<BadRequestObjectResult>(result);
     }
@@ -225,9 +233,11 @@ public class ProductsControllerTests
     [Trait("Category", "Unit")]
     public async Task Put_WhenModelStateInvalid_ReturnsBadRequest()
     {
-        _controller.ControllerContext = MakeControllerContext(Guid.NewGuid());
-        _controller.ModelState.AddModelError("Name", "Required");
-        var result = await _controller.Put(Guid.NewGuid(), new Product(), TestContext.Current.CancellationToken);
+        var signedInOwnerId = Guid.NewGuid();
+        var targetProductId = Guid.NewGuid();
+        _controller.ControllerContext = MakeControllerContext(signedInOwnerId);
+        _controller.ModelState.AddModelError(nameof(Product.Name), TestValues.NewModelErrorMessage());
+        var result = await _controller.Put(targetProductId, new Product(), TestContext.Current.CancellationToken);
         Assert.IsType<BadRequestObjectResult>(result);
     }
 
@@ -235,9 +245,11 @@ public class ProductsControllerTests
     [Trait("Category", "Unit")]
     public async Task Patch_WhenModelStateInvalid_ReturnsBadRequest()
     {
-        _controller.ControllerContext = MakeControllerContext(Guid.NewGuid());
-        _controller.ModelState.AddModelError("Name", "Required");
-        var result = await _controller.Patch(Guid.NewGuid(), new Delta<Product>(), TestContext.Current.CancellationToken);
+        var signedInOwnerId = Guid.NewGuid();
+        var targetProductId = Guid.NewGuid();
+        _controller.ControllerContext = MakeControllerContext(signedInOwnerId);
+        _controller.ModelState.AddModelError(nameof(Product.Name), TestValues.NewModelErrorMessage());
+        var result = await _controller.Patch(targetProductId, new Delta<Product>(), TestContext.Current.CancellationToken);
         Assert.IsType<BadRequestObjectResult>(result);
     }
 
@@ -245,9 +257,11 @@ public class ProductsControllerTests
     [Trait("Category", "Unit")]
     public async Task Delete_WhenModelStateInvalid_ReturnsBadRequest()
     {
-        _controller.ControllerContext = MakeControllerContext(Guid.NewGuid());
-        _controller.ModelState.AddModelError("Name", "Required");
-        var result = await _controller.Delete(Guid.NewGuid(), TestContext.Current.CancellationToken);
+        var signedInOwnerId = Guid.NewGuid();
+        var targetProductId = Guid.NewGuid();
+        _controller.ControllerContext = MakeControllerContext(signedInOwnerId);
+        _controller.ModelState.AddModelError(nameof(Product.Name), TestValues.NewModelErrorMessage());
+        var result = await _controller.Delete(targetProductId, TestContext.Current.CancellationToken);
         Assert.IsType<BadRequestObjectResult>(result);
     }
 
@@ -262,7 +276,7 @@ public class ProductsControllerTests
                 It.IsAny<InsertOneOptions>(),
                 It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-        var input = new Product { Name = "Widget", Price = 1.99m };
+        var input = new Product { Name = TestValues.NewProductName(), Price = TestValues.NewPrice() };
         await _controller.Post(input, TestContext.Current.CancellationToken);
         Assert.Null(input.OwnerId);
     }
@@ -280,16 +294,29 @@ public class ProductsControllerTests
                 It.IsAny<InsertOneOptions>(),
                 It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-        var input = new Product { Name = "Widget", Price = 1.99m };
+        var input = new Product { Name = TestValues.NewProductName(), Price = TestValues.NewPrice() };
         await _controller.Post(input, TestContext.Current.CancellationToken);
         Assert.Null(input.OwnerId);
     }
 
+    private static Task<IActionResult> InvokeWriteAsync(
+        WriteOperation operation,
+        ProductsController controller,
+        Guid productId,
+        CancellationToken cancellationToken) =>
+        operation switch
+        {
+            WriteOperation.Put => controller.Put(productId, new Product(), cancellationToken),
+            WriteOperation.Patch => controller.Patch(productId, new Delta<Product>(), cancellationToken),
+            WriteOperation.Delete => controller.Delete(productId, cancellationToken),
+            _ => throw new ArgumentOutOfRangeException(nameof(operation)),
+        };
+
     private static Product MakeProduct(Guid? ownerId = null) => new()
     {
         Id = Guid.NewGuid(),
-        Name = "Widget",
-        Price = 9.99m,
+        Name = TestValues.NewProductName(),
+        Price = TestValues.NewPrice(),
         OwnerId = ownerId ?? Guid.NewGuid(),
         CreatedAt = DateTimeOffset.UtcNow.AddDays(-1),
         UpdatedAt = DateTimeOffset.UtcNow.AddDays(-1),
