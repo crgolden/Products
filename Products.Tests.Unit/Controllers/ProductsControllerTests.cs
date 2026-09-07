@@ -17,7 +17,6 @@ using Products.Tests.Unit.TestSupport;
 
 public class ProductsControllerTests
 {
-    // The sentinel is the case under test - a sub claim present but unparseable - so it stays a literal.
     private const string NotAGuid = "not-a-guid";
 
     private readonly Mock<IMongoCollection<Product>> _mockCollection;

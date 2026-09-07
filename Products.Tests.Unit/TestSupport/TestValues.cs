@@ -11,6 +11,10 @@ internal static class TestValues
 
     internal static Uri NewManualUrl() => new($"https://{LowercaseToken(12)}.example/{LowercaseToken(6)}");
 
+    internal static string NewBrand() => LowercaseToken(6);
+
+    internal static string NewModelNumber() => $"{LowercaseToken(3)}-{LowercaseToken(5)}";
+
     internal static string NewModelErrorKey() => LowercaseToken(8);
 
     internal static string NewModelErrorMessage() => $"invalid-{LowercaseToken(10)}";

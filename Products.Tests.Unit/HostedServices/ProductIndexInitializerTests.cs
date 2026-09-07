@@ -9,6 +9,8 @@ public sealed class ProductIndexInitializerTests
 {
     private static readonly TimeSpan ShortRetryDelay = TimeSpan.FromMilliseconds(10);
 
+    private static readonly TimeSpan RetryObservationTimeout = TimeSpan.FromSeconds(30);
+
     [Fact]
     [Trait("Category", "Unit")]
     public async Task ExecuteAsync_CreatesIndexesOnce_WhenMongoIsReachable()
@@ -40,27 +42,27 @@ public sealed class ProductIndexInitializerTests
     {
         // Arrange
         var serverSelectionFailure = $"server-selection-timeout-{Guid.NewGuid()}";
+        var attempted = new SemaphoreSlim(0);
         var indexManager = new Mock<IMongoIndexManager<Product>>(MockBehavior.Strict);
         indexManager
             .Setup(m => m.CreateManyAsync(
                 It.IsAny<IEnumerable<CreateIndexModel<Product>>>(),
                 It.IsAny<CancellationToken>()))
+            .Callback(() => attempted.Release())
             .ThrowsAsync(new TimeoutException(serverSelectionFailure));
         var initializer = CreateInitializer(indexManager, out _);
 
         // Act
         await initializer.StartAsync(TestContext.Current.CancellationToken);
-        await Task.Delay(TimeSpan.FromMilliseconds(100), TestContext.Current.CancellationToken);
+        var sawFirstAttempt = await attempted.WaitAsync(RetryObservationTimeout, TestContext.Current.CancellationToken);
+        var sawSecondAttempt = await attempted.WaitAsync(RetryObservationTimeout, TestContext.Current.CancellationToken);
         var faultedWhileMongoWasDown = ExecuteTaskOf(initializer).IsFaulted;
         await initializer.StopAsync(TestContext.Current.CancellationToken);
 
         // Assert
+        Assert.True(sawFirstAttempt);
+        Assert.True(sawSecondAttempt);
         Assert.False(faultedWhileMongoWasDown);
-        indexManager.Verify(
-            m => m.CreateManyAsync(
-                It.IsAny<IEnumerable<CreateIndexModel<Product>>>(),
-                It.IsAny<CancellationToken>()),
-            Times.AtLeast(2));
     }
 
     [Fact]

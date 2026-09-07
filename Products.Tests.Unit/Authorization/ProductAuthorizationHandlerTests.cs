@@ -10,8 +10,6 @@ using Products.Models;
 
 public sealed class ProductAuthorizationHandlerTests : IDisposable
 {
-    // The sentinel is the case under test - a sub claim that is present but unparseable - so it stays a
-    // literal rather than being generated, per rule 11's boundary-and-sentinel keep.
     private const string NotAGuid = "not-a-guid";
 
     private static readonly OperationAuthorizationRequirement EditRequirement = ProductOperations.Edit;

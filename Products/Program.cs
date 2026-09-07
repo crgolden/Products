@@ -142,11 +142,19 @@ try
     var mongoDatabase = mongoClient.GetDatabase(mongoDatabaseName);
     builder.Services.AddSingleton(mongoDatabase);
     ProductClassMap.Register();
+    CatalogProductClassMap.Register();
+    InventoryItemClassMap.Register();
     builder.Services.AddHostedService<ProductIndexInitializer>();
+    builder.Services.AddHostedService<CatalogProductIndexInitializer>();
+    builder.Services.AddHostedService<InventoryItemIndexInitializer>();
     builder.Services.AddControllers().AddOData(oDataOptions =>
     {
         var modelBuilder = new ODataConventionModelBuilder();
         modelBuilder.EntitySet<Product>("Products");
+        modelBuilder.EntitySet<CatalogProduct>("CatalogProducts");
+        modelBuilder.EntitySet<InventoryItem>("InventoryItems");
+        modelBuilder.EntityType<CatalogProduct>().Ignore(c => c.MatchKey);
+        modelBuilder.Ignore<AddToInventoryRequest>();
         var model = modelBuilder.GetEdmModel();
         oDataOptions.Select();
         oDataOptions.Filter();
