@@ -25,14 +25,14 @@ public class ProductsController : ODataController
     }
 
     private Guid? CurrentUserId =>
-        User.FindFirstValue("sub") is string s && Guid.TryParse(s, out var g) ? g : null;
+        User.FindFirstValue(ProductClaims.Subject) is string s && Guid.TryParse(s, out var g) ? g : null;
 
     [AllowAnonymous]
     [HttpGet]
     [MongoEnableQuery]
     public IQueryable<Product> Get()
     {
-        var sub = User.FindFirstValue("sub");
+        var sub = User.FindFirstValue(ProductClaims.Subject);
         if (sub != null && Guid.TryParse(sub, out var ownerId))
         {
             return _products.AsQueryable().Where(p => p.OwnerId == ownerId);

@@ -5,6 +5,7 @@ using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Products.Authorization;
 
 internal sealed class IntegrationAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions>
 {
@@ -20,8 +21,8 @@ internal sealed class IntegrationAuthHandler : AuthenticationHandler<Authenticat
     {
         var claims = new[]
         {
-            new Claim("sub", ProductsWebApplicationFactory.TestUserId.ToString()),
-            new Claim("scope", "products"),
+            new Claim(ProductClaims.Subject, ProductsWebApplicationFactory.TestUserId.ToString()),
+            new Claim(ProductClaims.Scope, ProductClaims.ProductsScope),
         };
         var identity = new ClaimsIdentity(claims, Scheme.Name);
         var ticket = new AuthenticationTicket(new ClaimsPrincipal(identity), Scheme.Name);

@@ -170,7 +170,7 @@ try
         .AddPolicy(nameof(Products), policy =>
         {
             policy.RequireAuthenticatedUser();
-            policy.RequireClaim("scope", "products");
+            policy.RequireClaim(ProductClaims.Scope, ProductClaims.ProductsScope);
         }).Services
         .AddSingleton<IAuthorizationHandler, ProductAuthorizationHandler>()
         .Configure<ForwardedHeadersOptions>(forwardedHeadersOptions =>
@@ -215,7 +215,7 @@ try
             return next(ctx);
         }
 
-        using (Serilog.Context.LogContext.PushProperty("UserId", ctx.User.FindFirstValue("sub")))
+        using (Serilog.Context.LogContext.PushProperty("UserId", ctx.User.FindFirstValue(ProductClaims.Subject)))
         using (Serilog.Context.LogContext.PushProperty("UserEmail", ctx.User.FindFirstValue("email")))
         {
             return next(ctx);

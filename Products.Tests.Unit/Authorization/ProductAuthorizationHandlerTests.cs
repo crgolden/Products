@@ -2,6 +2,7 @@ namespace Products.Tests.Unit.Authorization;
 
 using System.Diagnostics;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Products.Authorization;
@@ -9,6 +10,10 @@ using Products.Models;
 
 public sealed class ProductAuthorizationHandlerTests : IDisposable
 {
+    // The sentinel is the case under test - a sub claim that is present but unparseable - so it stays a
+    // literal rather than being generated, per rule 11's boundary-and-sentinel keep.
+    private const string NotAGuid = "not-a-guid";
+
     private static readonly OperationAuthorizationRequirement EditRequirement = ProductOperations.Edit;
     private static readonly OperationAuthorizationRequirement DeleteRequirement = ProductOperations.Delete;
 
@@ -45,8 +50,10 @@ public sealed class ProductAuthorizationHandlerTests : IDisposable
     [Trait("Category", "Unit")]
     public async Task HandleRequirementAsync_DoesNotSucceed_WhenNotOwner()
     {
-        var product = new Product { OwnerId = Guid.NewGuid() };
-        var user = MakeUser(Guid.NewGuid());
+        var ownerId = Guid.NewGuid();
+        var otherUserId = Guid.NewGuid();
+        var product = new Product { OwnerId = ownerId };
+        var user = MakeUser(otherUserId);
         var context = MakeContext(user, product, EditRequirement);
         var handler = new ProductAuthorizationHandler();
 
@@ -59,8 +66,9 @@ public sealed class ProductAuthorizationHandlerTests : IDisposable
     [Trait("Category", "Unit")]
     public async Task HandleRequirementAsync_DoesNotSucceed_WhenProductHasNoOwner()
     {
+        var signedInUserId = Guid.NewGuid();
         var product = new Product { OwnerId = null };
-        var user = MakeUser(Guid.NewGuid());
+        var user = MakeUser(signedInUserId);
         var context = MakeContext(user, product, EditRequirement);
         var handler = new ProductAuthorizationHandler();
 
@@ -73,8 +81,9 @@ public sealed class ProductAuthorizationHandlerTests : IDisposable
     [Trait("Category", "Unit")]
     public async Task HandleRequirementAsync_DoesNotSucceed_WhenUserHasNoSubClaim()
     {
-        var product = new Product { OwnerId = Guid.NewGuid() };
-        var user = new ClaimsPrincipal(new ClaimsIdentity([], "Bearer"));
+        var ownerId = Guid.NewGuid();
+        var product = new Product { OwnerId = ownerId };
+        var user = new ClaimsPrincipal(new ClaimsIdentity([], JwtBearerDefaults.AuthenticationScheme));
         var context = MakeContext(user, product, EditRequirement);
         var handler = new ProductAuthorizationHandler();
 
@@ -87,8 +96,9 @@ public sealed class ProductAuthorizationHandlerTests : IDisposable
     [Trait("Category", "Unit")]
     public async Task HandleRequirementAsync_DoesNotSucceed_WhenSubClaimIsNotAGuid()
     {
-        var product = new Product { OwnerId = Guid.NewGuid() };
-        var user = new ClaimsPrincipal(new ClaimsIdentity([new Claim("sub", "not-a-guid")], "Bearer"));
+        var ownerId = Guid.NewGuid();
+        var product = new Product { OwnerId = ownerId };
+        var user = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ProductClaims.Subject, NotAGuid)], JwtBearerDefaults.AuthenticationScheme));
         var context = MakeContext(user, product, EditRequirement);
         var handler = new ProductAuthorizationHandler();
 
@@ -114,8 +124,8 @@ public sealed class ProductAuthorizationHandlerTests : IDisposable
 
     private static ClaimsPrincipal MakeUser(Guid userId) =>
         new(new ClaimsIdentity(
-            [new Claim("sub", userId.ToString())],
-            authenticationType: "Bearer"));
+            [new Claim(ProductClaims.Subject, userId.ToString())],
+            authenticationType: JwtBearerDefaults.AuthenticationScheme));
 
     private static AuthorizationHandlerContext MakeContext(
         ClaimsPrincipal user,

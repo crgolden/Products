@@ -1,6 +1,7 @@
 namespace Products.Tests.Unit.Controllers;
 
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -8,12 +9,17 @@ using Microsoft.AspNetCore.OData.Deltas;
 using Microsoft.AspNetCore.OData.Results;
 using MongoDB.Driver;
 using Moq;
+using Products.Authorization;
 using Products.Controllers;
+using Products.HostedServices;
 using Products.Models;
 using Products.Tests.Unit.TestSupport;
 
 public class ProductsControllerTests
 {
+    // The sentinel is the case under test - a sub claim present but unparseable - so it stays a literal.
+    private const string NotAGuid = "not-a-guid";
+
     private readonly Mock<IMongoCollection<Product>> _mockCollection;
     private readonly Mock<IAuthorizationService> _mockAuthorizationService;
     private readonly ProductsController _controller;
@@ -24,7 +30,7 @@ public class ProductsControllerTests
         _mockAuthorizationService = new Mock<IAuthorizationService>(MockBehavior.Strict);
         var mockDatabase = new Mock<IMongoDatabase>(MockBehavior.Strict);
         mockDatabase
-            .Setup(d => d.GetCollection<Product>("Products", null))
+            .Setup(d => d.GetCollection<Product>(ProductIndexInitializer.CollectionName, null))
             .Returns(_mockCollection.Object);
         _controller = new ProductsController(mockDatabase.Object, _mockAuthorizationService.Object);
     }
@@ -285,7 +291,9 @@ public class ProductsControllerTests
     [Trait("Category", "Unit")]
     public async Task Post_WhenSubClaimIsNotValidGuid_SetsOwnerIdToNull()
     {
-        var identity = new ClaimsIdentity([new Claim("sub", "not-a-guid")], authenticationType: "Bearer");
+        var identity = new ClaimsIdentity(
+            [new Claim(ProductClaims.Subject, NotAGuid)],
+            authenticationType: JwtBearerDefaults.AuthenticationScheme);
         var httpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) };
         _controller.ControllerContext = new ControllerContext { HttpContext = httpContext };
         _mockCollection
@@ -312,22 +320,30 @@ public class ProductsControllerTests
             _ => throw new ArgumentOutOfRangeException(nameof(operation)),
         };
 
-    private static Product MakeProduct(Guid? ownerId = null) => new()
+    private static Product MakeProduct(Guid? ownerId = null)
     {
-        Id = Guid.NewGuid(),
-        Name = TestValues.NewProductName(),
-        Price = TestValues.NewPrice(),
-        OwnerId = ownerId ?? Guid.NewGuid(),
-        CreatedAt = DateTimeOffset.UtcNow.AddDays(-1),
-        UpdatedAt = DateTimeOffset.UtcNow.AddDays(-1),
-    };
+        var productId = Guid.NewGuid();
+        var resolvedOwnerId = ownerId ?? Guid.NewGuid();
+
+        return new Product
+        {
+            Id = productId,
+            Name = TestValues.NewProductName(),
+            Price = TestValues.NewPrice(),
+            OwnerId = resolvedOwnerId,
+            CreatedAt = DateTimeOffset.UtcNow.AddDays(-1),
+            UpdatedAt = DateTimeOffset.UtcNow.AddDays(-1),
+        };
+    }
 
     private static ControllerContext MakeControllerContext(Guid? userId = null)
     {
         var claims = userId.HasValue
-            ? new[] { new Claim("sub", userId.Value.ToString()) }
+            ? new[] { new Claim(ProductClaims.Subject, userId.Value.ToString()) }
             : [];
-        var identity = new ClaimsIdentity(claims, authenticationType: userId.HasValue ? "Bearer" : null);
+        var identity = new ClaimsIdentity(
+            claims,
+            authenticationType: userId.HasValue ? JwtBearerDefaults.AuthenticationScheme : null);
         var principal = new ClaimsPrincipal(identity);
         var httpContext = new DefaultHttpContext { User = principal };
         return new ControllerContext { HttpContext = httpContext };

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using Products.Authorization;
 
 public sealed class ProductsWebApplicationFactory : WebApplicationFactory<Program>
 {
@@ -19,8 +20,9 @@ public sealed class ProductsWebApplicationFactory : WebApplicationFactory<Progra
                 .AddScheme<AuthenticationSchemeOptions, IntegrationAuthHandler>(TestScheme, _ => { });
 
             services.AddAuthorizationBuilder()
-                .AddPolicy("Products", policy =>
-                    policy.RequireAuthenticatedUser().RequireClaim("scope", "products"));
+                .AddPolicy(nameof(Products), policy =>
+                    policy.RequireAuthenticatedUser()
+                        .RequireClaim(ProductClaims.Scope, ProductClaims.ProductsScope));
         });
     }
 }

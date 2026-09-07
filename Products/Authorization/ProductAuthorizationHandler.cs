@@ -14,7 +14,7 @@ public class ProductAuthorizationHandler
         OperationAuthorizationRequirement requirement,
         Product resource)
     {
-        var sub = context.User.FindFirstValue("sub");
+        var sub = context.User.FindFirstValue(ProductClaims.Subject);
         var authorized = sub != null && Guid.TryParse(sub, out var userId) && resource.OwnerId == userId;
 
         using var activity = Telemetry.ActivitySource.StartActivity("products.authorization.check_ownership");
