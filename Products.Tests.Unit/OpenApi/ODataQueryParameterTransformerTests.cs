@@ -82,20 +82,19 @@ public sealed class ODataQueryParameterTransformerTests
         Assert.Empty(get.Security);
     }
 
-    [Fact]
-    public async Task TransformAsync_InventoryOperations_InheritTheDocumentBearerRequirement()
+    [Theory]
+    [InlineData("/odata/InventoryItems")]
+    [InlineData("/inventory/items")]
+    public async Task TransformAsync_InventoryOperations_InheritTheDocumentBearerRequirement(string path)
     {
         var transformer = new ODataQueryParameterTransformer();
         var document = new OpenApiDocument();
 
         await transformer.TransformAsync(document, Context, CancellationToken.None);
 
-        foreach (var path in new[] { "/odata/InventoryItems", "/inventory/items" })
-        {
-            var operations = document.Paths?[path]?.Operations;
-            Assert.NotNull(operations);
-            Assert.All(operations.Values, o => Assert.Null(o.Security));
-        }
+        var operations = document.Paths?[path]?.Operations;
+        Assert.NotNull(operations);
+        Assert.All(operations.Values, o => Assert.Null(o.Security));
     }
 
     [Fact]
