@@ -141,16 +141,13 @@ try
     builder.Services.AddSingleton<IMongoClient>(mongoClient);
     var mongoDatabase = mongoClient.GetDatabase(mongoDatabaseName);
     builder.Services.AddSingleton(mongoDatabase);
-    ProductClassMap.Register();
     CatalogProductClassMap.Register();
     InventoryItemClassMap.Register();
-    builder.Services.AddHostedService<ProductIndexInitializer>();
     builder.Services.AddHostedService<CatalogProductIndexInitializer>();
     builder.Services.AddHostedService<InventoryItemIndexInitializer>();
     builder.Services.AddControllers().AddOData(oDataOptions =>
     {
         var modelBuilder = new ODataConventionModelBuilder();
-        modelBuilder.EntitySet<Product>("Products");
         modelBuilder.EntitySet<CatalogProduct>("CatalogProducts");
         modelBuilder.EntitySet<InventoryItem>("InventoryItems");
         modelBuilder.EntityType<CatalogProduct>().Ignore(c => c.MatchKey);
@@ -180,7 +177,6 @@ try
             policy.RequireAuthenticatedUser();
             policy.RequireClaim(ProductClaims.Scope, ProductClaims.ProductsScope);
         }).Services
-        .AddSingleton<IAuthorizationHandler, ProductAuthorizationHandler>()
         .Configure<ForwardedHeadersOptions>(forwardedHeadersOptions =>
         {
             forwardedHeadersOptions.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
