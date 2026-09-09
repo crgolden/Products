@@ -52,7 +52,16 @@ public class CatalogProductsController : ODataController
         catalogProduct.Id = Guid.NewGuid();
         catalogProduct.CreatedAt = DateTimeOffset.UtcNow;
         catalogProduct.MatchKey = CatalogProductMatchKey.Compute(catalogProduct.Brand, catalogProduct.ModelNumber);
-        await _catalogProducts.InsertOneAsync(catalogProduct, cancellationToken: cancellationToken);
+        try
+        {
+            await _catalogProducts.InsertOneAsync(catalogProduct, cancellationToken: cancellationToken);
+        }
+        catch (MongoWriteException exception)
+            when (exception.WriteError?.Category == ServerErrorCategory.DuplicateKey)
+        {
+            return Conflict();
+        }
+
         return Created(catalogProduct);
     }
 
@@ -81,7 +90,16 @@ public class CatalogProductsController : ODataController
         existing.CreatedAt = createdAt;
         existing.UpdatedAt = DateTimeOffset.UtcNow;
         existing.MatchKey = CatalogProductMatchKey.Compute(existing.Brand, existing.ModelNumber);
-        await _catalogProducts.ReplaceOneAsync(c => c.Id == key, existing, cancellationToken: cancellationToken);
+        try
+        {
+            await _catalogProducts.ReplaceOneAsync(c => c.Id == key, existing, cancellationToken: cancellationToken);
+        }
+        catch (MongoWriteException exception)
+            when (exception.WriteError?.Category == ServerErrorCategory.DuplicateKey)
+        {
+            return Conflict();
+        }
+
         return Updated(existing);
     }
 }

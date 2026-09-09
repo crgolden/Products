@@ -68,6 +68,34 @@ public sealed class IntegrationInventoryTests : IAsyncDisposable
             second.GetProperty("catalogProductId").GetGuid());
     }
 
+    [Fact]
+    public async Task PatchingACatalogProductOntoAnotherRowsMatchKey_Returns409_NotA500()
+    {
+        // Arrange
+        var takenBrand = TestValues.NewBrand();
+        var takenModelNumber = TestValues.NewModelNumber();
+        var takenItemId = await AddToInventoryAsync(
+            TestValues.NewProductName(), takenBrand, takenModelNumber, TestValues.NewModelNumber());
+        _createdItemIds.Add(takenItemId);
+
+        var movingItemId = await AddToInventoryAsync(
+            TestValues.NewProductName(),
+            TestValues.NewBrand(),
+            TestValues.NewModelNumber(),
+            TestValues.NewModelNumber());
+        _createdItemIds.Add(movingItemId);
+        var movingCatalogProductId = await GetCatalogProductIdAsync(movingItemId);
+
+        // Act
+        var response = await _client.PatchAsJsonAsync(
+            $"/odata/CatalogProducts({movingCatalogProductId})",
+            new { brand = takenBrand, modelNumber = takenModelNumber },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
     [Theory]
     [InlineData("/odata/Products")]
     [InlineData("/odata/Products(00000000-0000-0000-0000-000000000001)")]
@@ -86,6 +114,18 @@ public sealed class IntegrationInventoryTests : IAsyncDisposable
         }
 
         _client.Dispose();
+    }
+
+    private async Task<Guid> GetCatalogProductIdAsync(Guid itemId)
+    {
+        var response = await _client.GetAsync("/inventory/items", TestContext.Current.CancellationToken);
+        response.EnsureSuccessStatusCode();
+        var items = await response.Content.ReadFromJsonAsync<JsonElement>(
+            TestContext.Current.CancellationToken);
+        return items.EnumerateArray()
+            .Single(i => i.GetProperty("id").GetGuid() == itemId)
+            .GetProperty("catalogProductId")
+            .GetGuid();
     }
 
     private async Task<Guid> AddToInventoryAsync(

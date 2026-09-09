@@ -1,9 +1,13 @@
 namespace Products.Tests.Unit.Controllers;
 
+using System.Net;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Deltas;
 using Microsoft.AspNetCore.OData.Results;
 using MongoDB.Driver;
+using MongoDB.Driver.Core.Clusters;
+using MongoDB.Driver.Core.Connections;
+using MongoDB.Driver.Core.Servers;
 using Moq;
 using Products.Controllers;
 using Products.HostedServices;
@@ -106,6 +110,59 @@ public class CatalogProductsControllerTests
             TestContext.Current.CancellationToken);
 
         Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task Patch_DoesNotTurnAnUnrelatedWriteErrorIntoAConflict()
+    {
+        var existing = new CatalogProduct
+        {
+            Id = Guid.NewGuid(),
+            Name = TestValues.NewProductName(),
+            Brand = TestValues.NewBrand(),
+            ModelNumber = TestValues.NewModelNumber(),
+        };
+        SetupFindReturns([existing]);
+        _mockCollection
+            .Setup(c => c.ReplaceOneAsync(
+                It.IsAny<FilterDefinition<CatalogProduct>>(),
+                It.IsAny<CatalogProduct>(),
+                It.IsAny<ReplaceOptions>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(WriteExceptionWithoutADuplicateKey());
+
+        await Assert.ThrowsAsync<MongoWriteException>(() => _controller.Patch(
+            existing.Id,
+            new Delta<CatalogProduct>(),
+            TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task Post_DoesNotTurnAnUnrelatedWriteErrorIntoAConflict()
+    {
+        _mockCollection
+            .Setup(c => c.InsertOneAsync(
+                It.IsAny<CatalogProduct>(),
+                It.IsAny<InsertOneOptions>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(WriteExceptionWithoutADuplicateKey());
+        var input = new CatalogProduct
+        {
+            Name = TestValues.NewProductName(),
+            Brand = TestValues.NewBrand(),
+            ModelNumber = TestValues.NewModelNumber(),
+        };
+
+        await Assert.ThrowsAsync<MongoWriteException>(() =>
+            _controller.Post(input, TestContext.Current.CancellationToken));
+    }
+
+    private static MongoWriteException WriteExceptionWithoutADuplicateKey()
+    {
+        var serverId = new ServerId(new ClusterId(), new DnsEndPoint("localhost", 27017));
+        return new MongoWriteException(new ConnectionId(serverId), null, null, null);
     }
 
     private void SetupInsertSucceeds() =>
