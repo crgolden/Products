@@ -1,11 +1,16 @@
 namespace Products.HostedServices;
 
 using Models;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 public sealed class CatalogProductIndexInitializer : BackgroundService
 {
     public const string CollectionName = "CatalogProducts";
+
+    internal const string ComputableMatchKeyIndexName = "MatchKey_computable_unique";
+
+    internal const string SupersededMatchKeyIndexName = "MatchKey_1";
 
     private static readonly TimeSpan DefaultRetryDelay = TimeSpan.FromSeconds(30);
 
@@ -29,8 +34,10 @@ public sealed class CatalogProductIndexInitializer : BackgroundService
                 Builders<CatalogProduct>.IndexKeys.Ascending(c => c.MatchKey),
                 new CreateIndexOptions<CatalogProduct>
                 {
+                    Name = ComputableMatchKeyIndexName,
                     Unique = true,
-                    PartialFilterExpression = Builders<CatalogProduct>.Filter.Exists(c => c.MatchKey),
+                    PartialFilterExpression =
+                        Builders<CatalogProduct>.Filter.Type(c => c.MatchKey, BsonType.String),
                 }),
         };
 
@@ -39,6 +46,7 @@ public sealed class CatalogProductIndexInitializer : BackgroundService
             try
             {
                 await collection.Indexes.CreateManyAsync(indexModels, stoppingToken);
+                await DropSupersededMatchKeyIndexAsync(collection, stoppingToken);
                 return;
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
@@ -47,6 +55,18 @@ public sealed class CatalogProductIndexInitializer : BackgroundService
             }
 
             await Task.Delay(_retryDelay, stoppingToken);
+        }
+    }
+
+    private static async Task DropSupersededMatchKeyIndexAsync(
+        IMongoCollection<CatalogProduct> collection,
+        CancellationToken cancellationToken)
+    {
+        using var cursor = await collection.Indexes.ListAsync(cancellationToken);
+        var indexes = await cursor.ToListAsync(cancellationToken);
+        if (indexes.Any(index => index["name"] == SupersededMatchKeyIndexName))
+        {
+            await collection.Indexes.DropOneAsync(SupersededMatchKeyIndexName, cancellationToken);
         }
     }
 }

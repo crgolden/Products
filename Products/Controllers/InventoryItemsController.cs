@@ -27,7 +27,7 @@ public class InventoryItemsController : ODataController
         User.FindFirstValue(ProductClaims.Subject) is string s && Guid.TryParse(s, out var g) ? g : null;
 
     [HttpGet]
-    [MongoEnableQuery]
+    [MongoEnableQuery(HandleNullPropagation = HandleNullPropagationOption.False)]
     public ActionResult<IQueryable<InventoryItem>> Get(ODataQueryOptions<InventoryItem> queryOptions)
     {
         if (CurrentUserId is not Guid ownerId)

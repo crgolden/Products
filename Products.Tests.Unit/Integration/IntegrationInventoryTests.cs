@@ -99,7 +99,7 @@ public sealed class IntegrationInventoryTests : IAsyncDisposable
     [Fact]
     public async Task TopZeroOnTheCatalog_ReturnsAnEmptyPageAndTheRealCount_NotA500()
     {
-        // Arrange - at least one row must exist, or a count of zero would pass for the wrong reason.
+        // Arrange
         var itemId = await AddToInventoryAsync(
             TestValues.NewProductName(),
             TestValues.NewBrand(),
@@ -118,6 +118,61 @@ public sealed class IntegrationInventoryTests : IAsyncDisposable
             TestContext.Current.CancellationToken);
         Assert.Empty(body.GetProperty("value").EnumerateArray());
         Assert.True(body.GetProperty("@odata.count").GetInt64() > 0);
+    }
+
+    [Theory]
+    [InlineData("startswith")]
+    [InlineData("contains")]
+    public async Task NegatingAStringFunction_FiltersTheRows_NotA500(string function)
+    {
+        // Arrange
+        var uppercaseMarker = TestValues.LowercaseToken(4).ToUpperInvariant();
+        var excludedModelNumber = $"{uppercaseMarker}{TestValues.NewModelNumber()}";
+        var lowercaseSurvivingModelNumber = TestValues.NewModelNumber();
+        _createdItemIds.Add(await AddToInventoryAsync(
+            TestValues.NewProductName(),
+            TestValues.NewBrand(),
+            excludedModelNumber,
+            TestValues.NewModelNumber()));
+        _createdItemIds.Add(await AddToInventoryAsync(
+            TestValues.NewProductName(),
+            TestValues.NewBrand(),
+            lowercaseSurvivingModelNumber,
+            TestValues.NewModelNumber()));
+
+        // Act
+        var response = await _client.GetAsync(
+            $"/odata/CatalogProducts?$filter=not {function}(ModelNumber,'{uppercaseMarker}')",
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        Assert.Contains(lowercaseSurvivingModelNumber, body, StringComparison.Ordinal);
+        Assert.DoesNotContain(excludedModelNumber, body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task NegatingAStringFunction_KeepsRowsWhoseFieldIsNull()
+    {
+        // Arrange
+        var uppercaseMarker = TestValues.LowercaseToken(4).ToUpperInvariant();
+        var nameOfTheRowWithANullCategory = TestValues.NewProductName();
+        _createdItemIds.Add(await AddToInventoryAsync(
+            nameOfTheRowWithANullCategory,
+            TestValues.NewBrand(),
+            TestValues.NewModelNumber(),
+            TestValues.NewModelNumber()));
+
+        // Act
+        var response = await _client.GetAsync(
+            $"/odata/CatalogProducts?$filter=not startswith(Category,'{uppercaseMarker}')",
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        Assert.Contains(nameOfTheRowWithANullCategory, body, StringComparison.Ordinal);
     }
 
     [Theory]
