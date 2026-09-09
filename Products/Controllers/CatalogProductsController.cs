@@ -24,7 +24,8 @@ public class CatalogProductsController : ODataController
     [AllowAnonymous]
     [HttpGet]
     [MongoEnableQuery]
-    public IQueryable<CatalogProduct> Get() => _catalogProducts.AsQueryable();
+    public IQueryable<CatalogProduct> Get(ODataQueryOptions<CatalogProduct> queryOptions) =>
+        MongoTopZeroGuard.WithoutAServerSideLimitOfZero(_catalogProducts.AsQueryable(), queryOptions);
 
     [AllowAnonymous]
     [HttpGet]

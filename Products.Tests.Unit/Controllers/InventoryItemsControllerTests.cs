@@ -5,7 +5,9 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Deltas;
+using Microsoft.AspNetCore.OData.Query;
 using Microsoft.AspNetCore.OData.Results;
+using Microsoft.OData.ModelBuilder;
 using MongoDB.Driver;
 using Moq;
 using Products.Authorization;
@@ -35,7 +37,7 @@ public class InventoryItemsControllerTests
     {
         _controller.ControllerContext = MakeControllerContext(userId: null);
 
-        var result = _controller.Get();
+        var result = _controller.Get(EmptyQueryOptions());
 
         Assert.IsType<UnauthorizedResult>(result.Result);
     }
@@ -46,7 +48,7 @@ public class InventoryItemsControllerTests
     {
         _controller.ControllerContext = MakeControllerContextWithSubject("not-a-guid");
 
-        var result = _controller.Get();
+        var result = _controller.Get(EmptyQueryOptions());
 
         Assert.IsType<UnauthorizedResult>(result.Result);
     }
@@ -136,6 +138,14 @@ public class InventoryItemsControllerTests
         var result = await _controller.Delete(Guid.NewGuid(), TestContext.Current.CancellationToken);
 
         Assert.IsType<NoContentResult>(result);
+    }
+
+    private static ODataQueryOptions<InventoryItem> EmptyQueryOptions()
+    {
+        var modelBuilder = new ODataConventionModelBuilder();
+        modelBuilder.EntitySet<InventoryItem>(InventoryItemIndexInitializer.CollectionName);
+        var context = new ODataQueryContext(modelBuilder.GetEdmModel(), typeof(InventoryItem), null);
+        return new ODataQueryOptions<InventoryItem>(context, new DefaultHttpContext().Request);
     }
 
     private static ControllerContext MakeControllerContext(Guid? userId) =>

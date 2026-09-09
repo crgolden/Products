@@ -28,14 +28,16 @@ public class InventoryItemsController : ODataController
 
     [HttpGet]
     [MongoEnableQuery]
-    public ActionResult<IQueryable<InventoryItem>> Get()
+    public ActionResult<IQueryable<InventoryItem>> Get(ODataQueryOptions<InventoryItem> queryOptions)
     {
         if (CurrentUserId is not Guid ownerId)
         {
             return Unauthorized();
         }
 
-        return Ok(_inventoryItems.AsQueryable().Where(i => i.OwnerId == ownerId));
+        return Ok(MongoTopZeroGuard.WithoutAServerSideLimitOfZero(
+            _inventoryItems.AsQueryable().Where(i => i.OwnerId == ownerId),
+            queryOptions));
     }
 
     [HttpGet]

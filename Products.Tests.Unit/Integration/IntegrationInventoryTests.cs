@@ -96,6 +96,30 @@ public sealed class IntegrationInventoryTests : IAsyncDisposable
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
 
+    [Fact]
+    public async Task TopZeroOnTheCatalog_ReturnsAnEmptyPageAndTheRealCount_NotA500()
+    {
+        // Arrange - at least one row must exist, or a count of zero would pass for the wrong reason.
+        var itemId = await AddToInventoryAsync(
+            TestValues.NewProductName(),
+            TestValues.NewBrand(),
+            TestValues.NewModelNumber(),
+            TestValues.NewModelNumber());
+        _createdItemIds.Add(itemId);
+
+        // Act
+        var response = await _client.GetAsync(
+            "/odata/CatalogProducts?$count=true&$top=0",
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>(
+            TestContext.Current.CancellationToken);
+        Assert.Empty(body.GetProperty("value").EnumerateArray());
+        Assert.True(body.GetProperty("@odata.count").GetInt64() > 0);
+    }
+
     [Theory]
     [InlineData("/odata/Products")]
     [InlineData("/odata/Products(00000000-0000-0000-0000-000000000001)")]
