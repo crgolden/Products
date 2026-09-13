@@ -70,7 +70,8 @@ public class InventoryControllerTests
     public async Task GetMyInventory_StillReturnsTheItem_WhenItsCatalogProductIsMissing()
     {
         var ownerId = Guid.NewGuid();
-        var item = MakeItem(ownerId, Guid.NewGuid());
+        var missingCatalogProductId = Guid.NewGuid();
+        var item = MakeItem(ownerId, missingCatalogProductId);
         _controller.ControllerContext = MakeControllerContext(ownerId);
         SetupItemsReturn([item]);
         SetupCatalogReturns([]);
@@ -111,9 +112,9 @@ public class InventoryControllerTests
     {
         var ownerId = Guid.NewGuid();
         var uppercaseFirst = MakeCatalogProduct();
-        uppercaseFirst.Name = $"Z{TestValues.NewProductName()}";
+        uppercaseFirst.Name = TestValues.NewUppercaseSortingName();
         var lowercaseFirst = MakeCatalogProduct();
-        lowercaseFirst.Name = $"a{TestValues.NewProductName()}";
+        lowercaseFirst.Name = TestValues.NewLowercaseSortingName();
         var uppercaseItem = MakeItem(ownerId, uppercaseFirst.Id);
         var lowercaseItem = MakeItem(ownerId, lowercaseFirst.Id);
         _controller.ControllerContext = MakeControllerContext(ownerId);
@@ -187,25 +188,33 @@ public class InventoryControllerTests
     private static object? GetValue(ActionResult<IReadOnlyList<InventoryItemView>> result) =>
         Assert.IsType<OkObjectResult>(result.Result).Value;
 
-    private static CatalogProduct MakeCatalogProduct() => new()
+    private static CatalogProduct MakeCatalogProduct()
     {
-        Id = Guid.NewGuid(),
-        Name = TestValues.NewProductName(),
-        Brand = TestValues.NewBrand(),
-        ModelNumber = TestValues.NewModelNumber(),
-        MsrpPrice = TestValues.NewPrice(),
-        CreatedAt = DateTimeOffset.UtcNow,
-    };
+        var catalogProductId = Guid.NewGuid();
+        return new CatalogProduct
+        {
+            Id = catalogProductId,
+            Name = TestValues.NewProductName(),
+            Brand = TestValues.NewBrand(),
+            ModelNumber = TestValues.NewModelNumber(),
+            MsrpPrice = TestValues.NewPrice(),
+            CreatedAt = DateTimeOffset.UtcNow,
+        };
+    }
 
-    private static InventoryItem MakeItem(Guid ownerId, Guid catalogProductId) => new()
+    private static InventoryItem MakeItem(Guid ownerId, Guid catalogProductId)
     {
-        Id = Guid.NewGuid(),
-        OwnerId = ownerId,
-        CatalogProductId = catalogProductId,
-        SerialNumber = TestValues.NewModelNumber(),
-        PricePaid = TestValues.NewPrice(),
-        CreatedAt = DateTimeOffset.UtcNow,
-    };
+        var itemId = Guid.NewGuid();
+        return new InventoryItem
+        {
+            Id = itemId,
+            OwnerId = ownerId,
+            CatalogProductId = catalogProductId,
+            SerialNumber = TestValues.NewModelNumber(),
+            PricePaid = TestValues.NewPrice(),
+            CreatedAt = DateTimeOffset.UtcNow,
+        };
+    }
 
     private static ControllerContext MakeControllerContext(Guid? userId)
     {

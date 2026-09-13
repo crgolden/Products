@@ -37,14 +37,27 @@ public class InventoryItemsControllerAuthorizationTests
 
     [Fact]
     [Trait("Category", "Unit")]
-    public void CatalogProductsController_ExposesNoDeleteAction()
+    public void CatalogProductsController_DeleteAction_RequiresTheProductsPolicy()
     {
-        var delete = typeof(CatalogProductsController)
+        var delete = CatalogDeleteAction();
+
+        Assert.NotNull(delete);
+        var authorize = delete.GetCustomAttribute<AuthorizeAttribute>();
+        Assert.NotNull(authorize);
+        Assert.Equal(nameof(Products), authorize.Policy);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public void CatalogProductsController_DeleteAction_IsNotAnonymous()
+    {
+        Assert.Null(CatalogDeleteAction()?.GetCustomAttribute<AllowAnonymousAttribute>());
+    }
+
+    private static MethodInfo? CatalogDeleteAction() =>
+        typeof(CatalogProductsController)
             .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
             .SingleOrDefault(m => m.GetCustomAttribute<HttpDeleteAttribute>() is not null);
-
-        Assert.Null(delete);
-    }
 
     private static MethodInfo[] PublicActions() =>
         typeof(InventoryItemsController)

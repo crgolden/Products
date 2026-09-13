@@ -2,6 +2,8 @@ namespace Products.Models;
 
 public class CatalogProduct
 {
+    internal const string EntitySetName = "CatalogProducts";
+
 #pragma warning disable S6964 // nullable is not appropriate for the OData entity key or a timestamp that must be present on every record
     public Guid Id { get; set; }
 

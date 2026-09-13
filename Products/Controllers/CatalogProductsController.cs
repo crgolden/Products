@@ -15,15 +15,18 @@ using MongoDB.Driver;
 public class CatalogProductsController : ODataController
 {
     private readonly IMongoCollection<CatalogProduct> _catalogProducts;
+    private readonly IMongoCollection<InventoryItem> _inventoryItems;
 
     public CatalogProductsController(IMongoDatabase database)
     {
         _catalogProducts = database.GetCollection<CatalogProduct>(CatalogProductIndexInitializer.CollectionName);
+        _inventoryItems = database.GetCollection<InventoryItem>(InventoryItemIndexInitializer.CollectionName);
     }
 
     [AllowAnonymous]
     [HttpGet]
     [MongoEnableQuery(HandleNullPropagation = HandleNullPropagationOption.False)]
+    [MaterializeODataList]
     public IQueryable<CatalogProduct> Get(ODataQueryOptions<CatalogProduct> queryOptions) =>
         MongoTopZeroGuard.WithoutAServerSideLimitOfZero(_catalogProducts.AsQueryable(), queryOptions);
 
@@ -102,5 +105,27 @@ public class CatalogProductsController : ODataController
         }
 
         return Updated(existing);
+    }
+
+    [Authorize(Policy = nameof(Products))]
+    [HttpDelete]
+    public async Task<IActionResult> Delete(
+        [FromRoute] Guid key,
+        CancellationToken cancellationToken)
+    {
+        var referencing = await _inventoryItems
+            .Find(item => item.CatalogProductId == key)
+            .Limit(1)
+            .AnyAsync(cancellationToken);
+        if (referencing)
+        {
+            return Conflict();
+        }
+
+        var deleted = await _catalogProducts.FindOneAndDeleteAsync(
+            c => c.Id == key,
+            cancellationToken: cancellationToken);
+
+        return deleted is null ? NotFound() : NoContent();
     }
 }

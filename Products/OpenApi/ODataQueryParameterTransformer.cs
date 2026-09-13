@@ -6,6 +6,49 @@ using Microsoft.OpenApi;
 
 public class ODataQueryParameterTransformer : IOpenApiDocumentTransformer
 {
+    internal const string CatalogProductsPath = "/odata/CatalogProducts";
+
+    internal const string InventoryItemsPath = "/odata/InventoryItems";
+
+    internal const string AddToInventoryPath = "/inventory/items";
+
+    internal const string RetiredProductsPath = "/odata/Products";
+
+    internal const string BearerSecuritySchemeName = "Bearer";
+
+    internal const string BearerSchemeValue = "bearer";
+
+    internal const string BearerTokenFormat = "JWT";
+
+    internal const string FilterQueryOption = "$filter";
+
+    internal const string SelectQueryOption = "$select";
+
+    internal const string OrderByQueryOption = "$orderby";
+
+    internal const string TopQueryOption = "$top";
+
+    internal const string SkipQueryOption = "$skip";
+
+    internal const string CountQueryOption = "$count";
+
+    internal const string ExpandQueryOption = "$expand";
+
+    internal const string OkStatusCode = "200";
+
+    internal const string CollectionValueProperty = "value";
+
+    internal static readonly string[] ListQueryOptions =
+    [
+        FilterQueryOption,
+        SelectQueryOption,
+        OrderByQueryOption,
+        TopQueryOption,
+        SkipQueryOption,
+        CountQueryOption,
+        ExpandQueryOption,
+    ];
+
     private const string UnauthorizedDescription = "Unauthorized";
 
     private static readonly HashSet<OpenApiTagReference> CatalogTags = new HashSet<OpenApiTagReference>
@@ -20,13 +63,13 @@ public class ODataQueryParameterTransformer : IOpenApiDocumentTransformer
 
     private static readonly List<IOpenApiParameter> ListParameters = new List<IOpenApiParameter>
     {
-        MakeQueryParam("$filter", "Filters results using OData filter syntax, e.g. Name eq 'Widget'"),
-        MakeQueryParam("$select", "Selects a subset of properties, e.g. Id,Name,Price"),
-        MakeQueryParam("$orderby", "Orders results, e.g. Price desc"),
-        MakeQueryParam("$top", "Limits the number of results returned (max 100)"),
-        MakeQueryParam("$skip", "Skips the specified number of results"),
-        MakeQueryParam("$count", "Includes a total count of matching results when set to true"),
-        MakeQueryParam("$expand", "Expands related entities inline"),
+        MakeQueryParam(FilterQueryOption, "Filters results using OData filter syntax, e.g. Name eq 'Widget'"),
+        MakeQueryParam(SelectQueryOption, "Selects a subset of properties, e.g. Id,Name,Price"),
+        MakeQueryParam(OrderByQueryOption, "Orders results, e.g. Price desc"),
+        MakeQueryParam(TopQueryOption, "Limits the number of results returned (max 100)"),
+        MakeQueryParam(SkipQueryOption, "Skips the specified number of results"),
+        MakeQueryParam(CountQueryOption, "Includes a total count of matching results when set to true"),
+        MakeQueryParam(ExpandQueryOption, "Expands related entities inline"),
     };
 
     public Task TransformAsync(
@@ -44,13 +87,13 @@ public class ODataQueryParameterTransformer : IOpenApiDocumentTransformer
         document.Components ??= new OpenApiComponents();
         document.Components.SecuritySchemes ??= new Dictionary<string, IOpenApiSecurityScheme>();
 
-        if (!document.Components.SecuritySchemes.ContainsKey("Bearer"))
+        if (!document.Components.SecuritySchemes.ContainsKey(BearerSecuritySchemeName))
         {
-            document.Components.SecuritySchemes["Bearer"] = new OpenApiSecurityScheme
+            document.Components.SecuritySchemes[BearerSecuritySchemeName] = new OpenApiSecurityScheme
             {
                 Type = SecuritySchemeType.Http,
-                Scheme = "bearer",
-                BearerFormat = "JWT",
+                Scheme = BearerSchemeValue,
+                BearerFormat = BearerTokenFormat,
                 Description = "JWT Bearer token issued by the OIDC authority.",
             };
         }
@@ -60,7 +103,7 @@ public class ODataQueryParameterTransformer : IOpenApiDocumentTransformer
         {
             document.Security.Add(new OpenApiSecurityRequirement
             {
-                [new OpenApiSecuritySchemeReference("Bearer")] = new List<string>(),
+                [new OpenApiSecuritySchemeReference(BearerSecuritySchemeName)] = new List<string>(),
             });
         }
     }
@@ -69,19 +112,19 @@ public class ODataQueryParameterTransformer : IOpenApiDocumentTransformer
     {
         document.Paths ??= new OpenApiPaths();
 
-        if (!document.Paths.ContainsKey("/odata/CatalogProducts"))
+        if (!document.Paths.ContainsKey(CatalogProductsPath))
         {
-            document.Paths["/odata/CatalogProducts"] = BuildCatalogListPath();
+            document.Paths[CatalogProductsPath] = BuildCatalogListPath();
         }
 
-        if (!document.Paths.ContainsKey("/odata/InventoryItems"))
+        if (!document.Paths.ContainsKey(InventoryItemsPath))
         {
-            document.Paths["/odata/InventoryItems"] = BuildInventoryListPath();
+            document.Paths[InventoryItemsPath] = BuildInventoryListPath();
         }
 
-        if (!document.Paths.ContainsKey("/inventory/items"))
+        if (!document.Paths.ContainsKey(AddToInventoryPath))
         {
-            document.Paths["/inventory/items"] = BuildAddToInventoryPath();
+            document.Paths[AddToInventoryPath] = BuildAddToInventoryPath();
         }
     }
 
@@ -99,7 +142,7 @@ public class ODataQueryParameterTransformer : IOpenApiDocumentTransformer
                     Security = new List<OpenApiSecurityRequirement>(),
                     Responses = new OpenApiResponses
                     {
-                        ["200"] = JsonResponse(CollectionOf(CatalogProductSchema())),
+                        [OkStatusCode] = JsonResponse(CollectionOf(CatalogProductSchema())),
                     },
                 },
             },
@@ -119,7 +162,7 @@ public class ODataQueryParameterTransformer : IOpenApiDocumentTransformer
                     Parameters = new List<IOpenApiParameter>(ListParameters),
                     Responses = new OpenApiResponses
                     {
-                        ["200"] = JsonResponse(CollectionOf(InventoryItemSchema())),
+                        [OkStatusCode] = JsonResponse(CollectionOf(InventoryItemSchema())),
                         ["401"] = new OpenApiResponse { Description = UnauthorizedDescription },
                     },
                 },
@@ -200,7 +243,7 @@ public class ODataQueryParameterTransformer : IOpenApiDocumentTransformer
                 ["brand"] = new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null },
                 ["modelNumber"] = new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null },
                 ["category"] = new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null },
-                ["manualUrl"] = new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null },
+                ["manualUrl"] = new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null, Format = "uri" },
                 ["msrpPrice"] = new OpenApiSchema { Type = JsonSchemaType.Number | JsonSchemaType.Null, Format = "decimal" },
                 ["serialNumber"] = new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null },
                 ["purchaseDate"] = new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null, Format = "date-time" },
@@ -217,7 +260,7 @@ public class ODataQueryParameterTransformer : IOpenApiDocumentTransformer
             Type = JsonSchemaType.Object,
             Properties = new Dictionary<string, IOpenApiSchema>
             {
-                ["value"] = new OpenApiSchema { Type = JsonSchemaType.Array, Items = itemSchema },
+                [CollectionValueProperty] = new OpenApiSchema { Type = JsonSchemaType.Array, Items = itemSchema },
             },
         };
     }

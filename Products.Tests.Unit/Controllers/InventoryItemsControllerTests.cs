@@ -46,7 +46,7 @@ public class InventoryItemsControllerTests
     [Trait("Category", "Unit")]
     public void Get_ReturnsUnauthorized_WhenTheSubClaimIsNotAGuid()
     {
-        _controller.ControllerContext = MakeControllerContextWithSubject("not-a-guid");
+        _controller.ControllerContext = MakeControllerContextWithSubject(TestValues.NewMalformedGuid());
 
         var result = _controller.Get(EmptyQueryOptions());
 
@@ -58,8 +58,9 @@ public class InventoryItemsControllerTests
     public async Task GetByKey_ReturnsUnauthorized_WhenThereIsNoSubClaim()
     {
         _controller.ControllerContext = MakeControllerContext(userId: null);
+        var itemId = Guid.NewGuid();
 
-        var result = await _controller.Get(Guid.NewGuid(), TestContext.Current.CancellationToken);
+        var result = await _controller.Get(itemId, TestContext.Current.CancellationToken);
 
         Assert.IsType<UnauthorizedResult>(result.Result);
     }
@@ -72,10 +73,11 @@ public class InventoryItemsControllerTests
         var spoofedOwnerId = Guid.NewGuid();
         _controller.ControllerContext = MakeControllerContext(ownerId);
         SetupInsertSucceeds();
+        var catalogProductId = Guid.NewGuid();
         var input = new InventoryItem
         {
             OwnerId = spoofedOwnerId,
-            CatalogProductId = Guid.NewGuid(),
+            CatalogProductId = catalogProductId,
             SerialNumber = TestValues.NewModelNumber(),
         };
 
@@ -91,7 +93,8 @@ public class InventoryItemsControllerTests
     public async Task Post_ReturnsUnauthorized_WhenThereIsNoSubClaim()
     {
         _controller.ControllerContext = MakeControllerContext(userId: null);
-        var input = new InventoryItem { CatalogProductId = Guid.NewGuid() };
+        var catalogProductId = Guid.NewGuid();
+        var input = new InventoryItem { CatalogProductId = catalogProductId };
 
         var result = await _controller.Post(input, TestContext.Current.CancellationToken);
 
@@ -105,9 +108,10 @@ public class InventoryItemsControllerTests
         var signedInOwnerId = Guid.NewGuid();
         _controller.ControllerContext = MakeControllerContext(signedInOwnerId);
         SetupFindReturns([]);
+        var itemId = Guid.NewGuid();
 
         var result = await _controller.Patch(
-            Guid.NewGuid(),
+            itemId,
             new Delta<InventoryItem>(),
             TestContext.Current.CancellationToken);
 
@@ -122,7 +126,9 @@ public class InventoryItemsControllerTests
         _controller.ControllerContext = MakeControllerContext(signedInOwnerId);
         SetupDeleteReturns(0);
 
-        var result = await _controller.Delete(Guid.NewGuid(), TestContext.Current.CancellationToken);
+        var itemId = Guid.NewGuid();
+
+        var result = await _controller.Delete(itemId, TestContext.Current.CancellationToken);
 
         Assert.IsType<NotFoundResult>(result);
     }
@@ -135,7 +141,9 @@ public class InventoryItemsControllerTests
         _controller.ControllerContext = MakeControllerContext(signedInOwnerId);
         SetupDeleteReturns(1);
 
-        var result = await _controller.Delete(Guid.NewGuid(), TestContext.Current.CancellationToken);
+        var itemId = Guid.NewGuid();
+
+        var result = await _controller.Delete(itemId, TestContext.Current.CancellationToken);
 
         Assert.IsType<NoContentResult>(result);
     }

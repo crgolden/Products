@@ -11,7 +11,7 @@ public class CatalogProductTests
     [Trait("Category", "Unit")]
     public void CatalogProduct_HasNoOwnerIdProperty_SoTheAnonymousSurfaceCannotLeakOwnership()
     {
-        var ownerProperty = typeof(CatalogProduct).GetProperty("OwnerId");
+        var ownerProperty = typeof(CatalogProduct).GetProperty(nameof(InventoryItem.OwnerId));
 
         Assert.Null(ownerProperty);
     }
@@ -22,7 +22,7 @@ public class CatalogProductTests
     {
         var entity = BuildCatalogProductEntity();
 
-        Assert.Null(entity.FindProperty("OwnerId"));
+        Assert.Null(entity.FindProperty(nameof(InventoryItem.OwnerId)));
     }
 
     [Fact]
@@ -53,12 +53,12 @@ public class CatalogProductTests
     private static IEdmEntityType BuildCatalogProductEntity()
     {
         var modelBuilder = new ODataConventionModelBuilder();
-        modelBuilder.EntitySet<CatalogProduct>("CatalogProducts");
+        modelBuilder.EntitySet<CatalogProduct>(CatalogProduct.EntitySetName);
         modelBuilder.EntityType<CatalogProduct>().Ignore(c => c.MatchKey);
 
         var model = modelBuilder.GetEdmModel();
         return Assert.IsType<IEdmEntityType>(
-            model.FindDeclaredType($"{typeof(CatalogProduct).Namespace}.{nameof(CatalogProduct)}"),
+            model.FindDeclaredType(typeof(CatalogProduct).FullName),
             exactMatch: false);
     }
 }

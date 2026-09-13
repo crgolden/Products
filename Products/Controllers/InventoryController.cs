@@ -115,7 +115,7 @@ public class InventoryController : ControllerBase
         Brand = request.Brand,
         ModelNumber = request.ModelNumber,
         Category = request.Category,
-        ManualUrl = request.ManualUrl,
+        ManualUrl = request.ManualUrl?.AbsoluteUri,
         MsrpPrice = request.MsrpPrice,
         MatchKey = matchKey,
     };

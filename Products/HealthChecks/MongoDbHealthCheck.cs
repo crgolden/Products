@@ -6,7 +6,14 @@ using MongoDB.Driver;
 
 public sealed class MongoDbHealthCheck : IHealthCheck
 {
-    private const int MaxAttempts = 2;
+    internal const int MaxAttempts = 2;
+
+    internal const string HealthyDescription = "Connected";
+
+    internal const string PingCommandName = "ping";
+
+    internal const string CommandOkField = "ok";
+
     private static readonly TimeSpan RetryDelay = TimeSpan.FromMilliseconds(250);
 
     private readonly IMongoDatabase _database;
@@ -25,10 +32,10 @@ public sealed class MongoDbHealthCheck : IHealthCheck
             attempt++;
             try
             {
-                var document = new BsonDocument("ping", 1);
+                var document = new BsonDocument(PingCommandName, 1);
                 var command = new BsonDocumentCommand<BsonDocument>(document);
                 await _database.RunCommandAsync(command, cancellationToken: cancellationToken);
-                return HealthCheckResult.Healthy("Connected");
+                return HealthCheckResult.Healthy(HealthyDescription);
             }
             catch (Exception ex)
             {

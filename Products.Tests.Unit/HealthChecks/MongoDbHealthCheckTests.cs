@@ -5,6 +5,7 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using Moq;
 using Products.HealthChecks;
+using TestSupport;
 
 public sealed class MongoDbHealthCheckTests
 {
@@ -19,7 +20,7 @@ public sealed class MongoDbHealthCheckTests
                 It.IsAny<Command<BsonDocument>>(),
                 It.IsAny<ReadPreference>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new BsonDocument("ok", 1));
+            .ReturnsAsync(new BsonDocument(MongoDbHealthCheck.CommandOkField, 1));
         var healthCheck = new MongoDbHealthCheck(database.Object);
 
         // Act
@@ -29,7 +30,7 @@ public sealed class MongoDbHealthCheckTests
 
         // Assert
         Assert.Equal(HealthStatus.Healthy, result.Status);
-        Assert.Equal("Connected", result.Description);
+        Assert.Equal(MongoDbHealthCheck.HealthyDescription, result.Description);
     }
 
     [Fact]
@@ -37,7 +38,7 @@ public sealed class MongoDbHealthCheckTests
     public async Task CheckHealthAsync_ReturnsUnhealthyWithLastException_WhenPingAlwaysFails()
     {
         // Arrange
-        var expected = new TimeoutException("A timeout occurred after 30000ms selecting a server");
+        var expected = new TimeoutException(TestValues.NewTimeoutMessage());
         var database = new Mock<IMongoDatabase>(MockBehavior.Strict);
         database
             .Setup(d => d.RunCommandAsync(
@@ -69,7 +70,7 @@ public sealed class MongoDbHealthCheckTests
                 It.IsAny<Command<BsonDocument>>(),
                 It.IsAny<ReadPreference>(),
                 It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new TimeoutException("unreachable"));
+            .ThrowsAsync(new TimeoutException(TestValues.NewTimeoutMessage()));
         var healthCheck = new MongoDbHealthCheck(database.Object);
 
         // Act
@@ -83,7 +84,7 @@ public sealed class MongoDbHealthCheckTests
                 It.IsAny<Command<BsonDocument>>(),
                 It.IsAny<ReadPreference>(),
                 It.IsAny<CancellationToken>()),
-            Times.Exactly(2));
+            Times.Exactly(MongoDbHealthCheck.MaxAttempts));
     }
 
     [Fact]
@@ -97,8 +98,8 @@ public sealed class MongoDbHealthCheckTests
                 It.IsAny<Command<BsonDocument>>(),
                 It.IsAny<ReadPreference>(),
                 It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new TimeoutException("transient"))
-            .ReturnsAsync(new BsonDocument("ok", 1));
+            .ThrowsAsync(new TimeoutException(TestValues.NewTimeoutMessage()))
+            .ReturnsAsync(new BsonDocument(MongoDbHealthCheck.CommandOkField, 1));
         var healthCheck = new MongoDbHealthCheck(database.Object);
 
         // Act

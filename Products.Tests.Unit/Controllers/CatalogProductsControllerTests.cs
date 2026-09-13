@@ -103,9 +103,10 @@ public class CatalogProductsControllerTests
     public async Task Patch_ReturnsNotFound_WhenTheCatalogProductDoesNotExist()
     {
         SetupFindReturns([]);
+        var catalogProductId = Guid.NewGuid();
 
         var result = await _controller.Patch(
-            Guid.NewGuid(),
+            catalogProductId,
             new Delta<CatalogProduct>(),
             TestContext.Current.CancellationToken);
 
@@ -116,9 +117,10 @@ public class CatalogProductsControllerTests
     [Trait("Category", "Unit")]
     public async Task Patch_DoesNotTurnAnUnrelatedWriteErrorIntoAConflict()
     {
+        var catalogProductId = Guid.NewGuid();
         var existing = new CatalogProduct
         {
-            Id = Guid.NewGuid(),
+            Id = catalogProductId,
             Name = TestValues.NewProductName(),
             Brand = TestValues.NewBrand(),
             ModelNumber = TestValues.NewModelNumber(),
@@ -161,7 +163,7 @@ public class CatalogProductsControllerTests
 
     private static MongoWriteException WriteExceptionWithoutADuplicateKey()
     {
-        var serverId = new ServerId(new ClusterId(), new DnsEndPoint("localhost", 27017));
+        var serverId = new ServerId(new ClusterId(), new DnsEndPoint(MongoEndpointConstants.LoopbackHost, MongoEndpointConstants.DefaultPort));
         return new MongoWriteException(new ConnectionId(serverId), null, null, null);
     }
 

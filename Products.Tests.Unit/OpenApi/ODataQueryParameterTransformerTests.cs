@@ -6,16 +6,22 @@ using Microsoft.AspNetCore.OpenApi;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi;
 using Products.OpenApi;
+using TestSupport;
 
 [Trait("Category", "Unit")]
 public sealed class ODataQueryParameterTransformerTests
 {
+    private const int SingleSecurityRequirement = 1;
+
     private static readonly OpenApiDocumentTransformerContext Context = new()
     {
-        DocumentName = "v1",
+        DocumentName = TestValues.NewOpenApiDocumentName(),
         DescriptionGroups = [],
         ApplicationServices = new ServiceCollection().BuildServiceProvider(),
     };
+
+    public static TheoryData<string> ListQueryOptions() =>
+        [.. ODataQueryParameterTransformer.ListQueryOptions];
 
     [Fact]
     public async Task TransformAsync_WithEmptyDocument_AddsBearerAndTheThreeSurvivingPaths()
@@ -25,11 +31,11 @@ public sealed class ODataQueryParameterTransformerTests
 
         await transformer.TransformAsync(document, Context, CancellationToken.None);
 
-        Assert.True(document.Components?.SecuritySchemes?.ContainsKey("Bearer"));
-        Assert.Equal(1, document.Security?.Count);
-        Assert.True(document.Paths?.ContainsKey("/odata/CatalogProducts"));
-        Assert.True(document.Paths?.ContainsKey("/odata/InventoryItems"));
-        Assert.True(document.Paths?.ContainsKey("/inventory/items"));
+        Assert.True(document.Components?.SecuritySchemes?.ContainsKey(ODataQueryParameterTransformer.BearerSecuritySchemeName));
+        Assert.Equal(SingleSecurityRequirement, document.Security?.Count);
+        Assert.True(document.Paths?.ContainsKey(ODataQueryParameterTransformer.CatalogProductsPath));
+        Assert.True(document.Paths?.ContainsKey(ODataQueryParameterTransformer.InventoryItemsPath));
+        Assert.True(document.Paths?.ContainsKey(ODataQueryParameterTransformer.AddToInventoryPath));
     }
 
     [Fact]
@@ -43,48 +49,74 @@ public sealed class ODataQueryParameterTransformerTests
         Assert.NotNull(document.Paths);
         Assert.DoesNotContain(
             document.Paths.Keys,
-            p => p.StartsWith("/odata/Products", StringComparison.Ordinal));
+            p => p.StartsWith(ODataQueryParameterTransformer.RetiredProductsPath, StringComparison.Ordinal));
     }
 
     [Fact]
-    public async Task TransformAsync_CatalogListPath_HasSevenQueryParameters()
+    public async Task TransformAsync_CatalogListPath_DeclaresEveryListQueryOption()
     {
         var transformer = new ODataQueryParameterTransformer();
         var document = new OpenApiDocument();
 
         await transformer.TransformAsync(document, Context, CancellationToken.None);
 
-        var parameters = document.Paths?["/odata/CatalogProducts"]?.Operations?[HttpMethod.Get]?.Parameters;
+        var parameters = document.Paths?[ODataQueryParameterTransformer.CatalogProductsPath]?.Operations?[HttpMethod.Get]?.Parameters;
         Assert.NotNull(parameters);
-        Assert.Equal(7, parameters.Count);
-        Assert.Contains(parameters, p => string.Equals(p.Name, "$filter", StringComparison.Ordinal));
-        Assert.Contains(parameters, p => string.Equals(p.Name, "$select", StringComparison.Ordinal));
-        Assert.Contains(parameters, p => string.Equals(p.Name, "$orderby", StringComparison.Ordinal));
-        Assert.Contains(parameters, p => string.Equals(p.Name, "$top", StringComparison.Ordinal));
-        Assert.Contains(parameters, p => string.Equals(p.Name, "$skip", StringComparison.Ordinal));
-        Assert.Contains(parameters, p => string.Equals(p.Name, "$count", StringComparison.Ordinal));
-        Assert.Contains(parameters, p => string.Equals(p.Name, "$expand", StringComparison.Ordinal));
+        Assert.Equal(ODataQueryParameterTransformer.ListQueryOptions.Length, parameters.Count);
     }
 
-    [Fact]
-    public async Task TransformAsync_CatalogRead_OptsOutOfTheDocumentBearerRequirement()
+    [Theory]
+    [MemberData(nameof(ListQueryOptions))]
+    public async Task TransformAsync_CatalogListPath_DeclaresTheQueryOption(string queryOption)
     {
         var transformer = new ODataQueryParameterTransformer();
         var document = new OpenApiDocument();
 
         await transformer.TransformAsync(document, Context, CancellationToken.None);
 
-        var get = document.Paths?["/odata/CatalogProducts"]?.Operations?[HttpMethod.Get];
-        Assert.NotNull(get);
+        var parameters = document.Paths?[ODataQueryParameterTransformer.CatalogProductsPath]?.Operations?[HttpMethod.Get]?.Parameters;
+        Assert.NotNull(parameters);
+        Assert.Contains(parameters, p => string.Equals(p.Name, queryOption, StringComparison.Ordinal));
+    }
 
-        // An explicit empty list is the opt-out; null would inherit the document-level Bearer.
+    [Fact]
+    public void ListQueryOptions_AreTheODataV4SystemQueryOptionNames()
+    {
+        Assert.Equal(
+            ["$filter", "$select", "$orderby", "$top", "$skip", "$count", "$expand"],
+            ODataQueryParameterTransformer.ListQueryOptions);
+    }
+
+    [Fact]
+    public async Task TransformAsync_CatalogRead_SecurityIsAnEmptyList_SoItOptsOutOfTheDocumentBearer()
+    {
+        var transformer = new ODataQueryParameterTransformer();
+        var document = new OpenApiDocument();
+
+        await transformer.TransformAsync(document, Context, CancellationToken.None);
+
+        var get = document.Paths?[ODataQueryParameterTransformer.CatalogProductsPath]?.Operations?[HttpMethod.Get];
+        Assert.NotNull(get);
         Assert.NotNull(get.Security);
         Assert.Empty(get.Security);
     }
 
+    [Fact]
+    public async Task TransformAsync_InventoryRead_SecurityIsNull_SoItInheritsTheDocumentBearer()
+    {
+        var transformer = new ODataQueryParameterTransformer();
+        var document = new OpenApiDocument();
+
+        await transformer.TransformAsync(document, Context, CancellationToken.None);
+
+        var get = document.Paths?[ODataQueryParameterTransformer.InventoryItemsPath]?.Operations?[HttpMethod.Get];
+        Assert.NotNull(get);
+        Assert.Null(get.Security);
+    }
+
     [Theory]
-    [InlineData("/odata/InventoryItems")]
-    [InlineData("/inventory/items")]
+    [InlineData(ODataQueryParameterTransformer.InventoryItemsPath)]
+    [InlineData(ODataQueryParameterTransformer.AddToInventoryPath)]
     public async Task TransformAsync_InventoryOperations_InheritTheDocumentBearerRequirement(string path)
     {
         var transformer = new ODataQueryParameterTransformer();
@@ -107,14 +139,15 @@ public sealed class ODataQueryParameterTransformerTests
             {
                 SecuritySchemes = new Dictionary<string, IOpenApiSecurityScheme>
                 {
-                    ["Bearer"] = new OpenApiSecurityScheme { Scheme = "bearer" },
+                    [ODataQueryParameterTransformer.BearerSecuritySchemeName] =
+                        new OpenApiSecurityScheme { Scheme = ODataQueryParameterTransformer.BearerSchemeValue },
                 },
             },
             Security =
             [
                 new OpenApiSecurityRequirement
                 {
-                    [new OpenApiSecuritySchemeReference("Bearer")] = [],
+                    [new OpenApiSecuritySchemeReference(ODataQueryParameterTransformer.BearerSecuritySchemeName)] = [],
                 },
             ],
         };
@@ -135,14 +168,14 @@ public sealed class ODataQueryParameterTransformerTests
         {
             Paths = new OpenApiPaths
             {
-                ["/odata/CatalogProducts"] = catalogPathItem,
-                ["/odata/InventoryItems"] = inventoryPathItem,
+                [ODataQueryParameterTransformer.CatalogProductsPath] = catalogPathItem,
+                [ODataQueryParameterTransformer.InventoryItemsPath] = inventoryPathItem,
             },
         };
 
         await transformer.TransformAsync(document, Context, CancellationToken.None);
 
-        Assert.Same(catalogPathItem, document.Paths["/odata/CatalogProducts"]);
-        Assert.Same(inventoryPathItem, document.Paths["/odata/InventoryItems"]);
+        Assert.Same(catalogPathItem, document.Paths[ODataQueryParameterTransformer.CatalogProductsPath]);
+        Assert.Same(inventoryPathItem, document.Paths[ODataQueryParameterTransformer.InventoryItemsPath]);
     }
 }

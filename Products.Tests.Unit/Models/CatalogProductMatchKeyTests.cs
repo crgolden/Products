@@ -29,7 +29,7 @@ public class CatalogProductMatchKeyTests
     {
         var modelNumber = TestValues.NewModelNumber();
 
-        Assert.Null(CatalogProductMatchKey.Compute("   ", modelNumber));
+        Assert.Null(CatalogProductMatchKey.Compute(TestValues.NewBlank(), modelNumber));
     }
 
     [Fact]
@@ -39,7 +39,10 @@ public class CatalogProductMatchKeyTests
         var brand = TestValues.NewBrand();
         var modelNumber = TestValues.NewModelNumber();
 
-        var padded = CatalogProductMatchKey.Compute($"  {brand} ", $" {modelNumber}  ");
+        var paddedBrand = string.Concat(TestValues.NewBlank(), brand, TestValues.NewBlank());
+        var paddedModelNumber = string.Concat(TestValues.NewBlank(), modelNumber, TestValues.NewBlank());
+
+        var padded = CatalogProductMatchKey.Compute(paddedBrand, paddedModelNumber);
         var bare = CatalogProductMatchKey.Compute(brand, modelNumber);
 
         Assert.Equal(bare, padded);

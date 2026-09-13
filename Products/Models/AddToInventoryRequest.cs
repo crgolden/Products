@@ -10,7 +10,7 @@ public class AddToInventoryRequest
 
     public string? Category { get; set; }
 
-    public string? ManualUrl { get; set; }
+    public Uri? ManualUrl { get; set; }
 
     public decimal? MsrpPrice { get; set; }
 

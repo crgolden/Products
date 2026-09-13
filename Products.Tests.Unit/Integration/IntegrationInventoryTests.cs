@@ -3,6 +3,8 @@ namespace Products.Tests.Unit.Integration;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Products.Models;
+using Products.OpenApi;
 using Products.Tests.Unit.Infrastructure;
 using Products.Tests.Unit.TestSupport;
 
@@ -10,6 +12,8 @@ using Products.Tests.Unit.TestSupport;
 [Trait("Category", "Integration")]
 public sealed class IntegrationInventoryTests : IAsyncDisposable
 {
+    private const int ZeroPageSize = 0;
+
     private readonly HttpClient _client;
     private readonly List<Guid> _createdItemIds = [];
 
@@ -30,16 +34,16 @@ public sealed class IntegrationInventoryTests : IAsyncDisposable
         // Act
         var itemId = await AddToInventoryAsync(name, brand, modelNumber, serialNumber);
         _createdItemIds.Add(itemId);
-        var response = await _client.GetAsync("/inventory/items", TestContext.Current.CancellationToken);
+        var response = await _client.GetAsync(ODataQueryParameterTransformer.AddToInventoryPath, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var items = await response.Content.ReadFromJsonAsync<JsonElement>(
             TestContext.Current.CancellationToken);
-        var item = items.EnumerateArray().Single(i => i.GetProperty("id").GetGuid() == itemId);
-        Assert.Equal(name, item.GetProperty("name").GetString());
-        Assert.Equal(brand, item.GetProperty("brand").GetString());
-        Assert.Equal(serialNumber, item.GetProperty("serialNumber").GetString());
+        var item = items.EnumerateArray().Single(i => i.GetProperty(JsonPropertyName(nameof(InventoryItemView.Id))).GetGuid() == itemId);
+        Assert.Equal(name, item.GetProperty(JsonPropertyName(nameof(InventoryItemView.Name))).GetString());
+        Assert.Equal(brand, item.GetProperty(JsonPropertyName(nameof(InventoryItemView.Brand))).GetString());
+        Assert.Equal(serialNumber, item.GetProperty(JsonPropertyName(nameof(InventoryItemView.SerialNumber))).GetString());
     }
 
     [Fact]
@@ -58,14 +62,14 @@ public sealed class IntegrationInventoryTests : IAsyncDisposable
         _createdItemIds.Add(secondId);
 
         // Assert
-        var response = await _client.GetAsync("/inventory/items", TestContext.Current.CancellationToken);
+        var response = await _client.GetAsync(ODataQueryParameterTransformer.AddToInventoryPath, TestContext.Current.CancellationToken);
         var items = await response.Content.ReadFromJsonAsync<JsonElement>(
             TestContext.Current.CancellationToken);
-        var first = items.EnumerateArray().Single(i => i.GetProperty("id").GetGuid() == firstId);
-        var second = items.EnumerateArray().Single(i => i.GetProperty("id").GetGuid() == secondId);
+        var first = items.EnumerateArray().Single(i => i.GetProperty(JsonPropertyName(nameof(InventoryItemView.Id))).GetGuid() == firstId);
+        var second = items.EnumerateArray().Single(i => i.GetProperty(JsonPropertyName(nameof(InventoryItemView.Id))).GetGuid() == secondId);
         Assert.Equal(
-            first.GetProperty("catalogProductId").GetGuid(),
-            second.GetProperty("catalogProductId").GetGuid());
+            first.GetProperty(JsonPropertyName(nameof(InventoryItemView.CatalogProductId))).GetGuid(),
+            second.GetProperty(JsonPropertyName(nameof(InventoryItemView.CatalogProductId))).GetGuid());
     }
 
     [Fact]
@@ -88,7 +92,7 @@ public sealed class IntegrationInventoryTests : IAsyncDisposable
 
         // Act
         var response = await _client.PatchAsJsonAsync(
-            $"/odata/CatalogProducts({movingCatalogProductId})",
+            $"{ODataQueryParameterTransformer.CatalogProductsPath}({movingCatalogProductId})",
             new { brand = takenBrand, modelNumber = takenModelNumber },
             TestContext.Current.CancellationToken);
 
@@ -109,25 +113,27 @@ public sealed class IntegrationInventoryTests : IAsyncDisposable
 
         // Act
         var response = await _client.GetAsync(
-            "/odata/CatalogProducts?$count=true&$top=0",
+            $"{ODataQueryParameterTransformer.CatalogProductsPath}" +
+                $"?{ODataQueryParameterTransformer.CountQueryOption}={ODataProtocolConstants.TrueValue}" +
+                $"&{ODataQueryParameterTransformer.TopQueryOption}={ZeroPageSize}",
             TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>(
             TestContext.Current.CancellationToken);
-        Assert.Empty(body.GetProperty("value").EnumerateArray());
-        Assert.True(body.GetProperty("@odata.count").GetInt64() > 0);
+        Assert.Empty(body.GetProperty(ODataQueryParameterTransformer.CollectionValueProperty).EnumerateArray());
+        Assert.True(body.GetProperty(ODataProtocolConstants.CountAnnotation).GetInt64() > 0);
     }
 
     [Theory]
-    [InlineData("startswith")]
-    [InlineData("contains")]
+    [InlineData(ODataProtocolConstants.StartsWithFunction)]
+    [InlineData(ODataProtocolConstants.ContainsFunction)]
     public async Task NegatingAStringFunction_FiltersTheRows_NotA500(string function)
     {
         // Arrange
-        var uppercaseMarker = TestValues.LowercaseToken(4).ToUpperInvariant();
-        var excludedModelNumber = $"{uppercaseMarker}{TestValues.NewModelNumber()}";
+        var uppercaseMarker = TestValues.NewUppercaseMarker();
+        var excludedModelNumber = string.Concat(uppercaseMarker, TestValues.NewModelNumber());
         var lowercaseSurvivingModelNumber = TestValues.NewModelNumber();
         _createdItemIds.Add(await AddToInventoryAsync(
             TestValues.NewProductName(),
@@ -142,7 +148,7 @@ public sealed class IntegrationInventoryTests : IAsyncDisposable
 
         // Act
         var response = await _client.GetAsync(
-            $"/odata/CatalogProducts?$filter=not {function}(ModelNumber,'{uppercaseMarker}')",
+            NegatedStringFunctionFilter(function, nameof(CatalogProduct.ModelNumber), uppercaseMarker),
             TestContext.Current.CancellationToken);
 
         // Assert
@@ -156,7 +162,7 @@ public sealed class IntegrationInventoryTests : IAsyncDisposable
     public async Task NegatingAStringFunction_KeepsRowsWhoseFieldIsNull()
     {
         // Arrange
-        var uppercaseMarker = TestValues.LowercaseToken(4).ToUpperInvariant();
+        var uppercaseMarker = TestValues.NewUppercaseMarker();
         var nameOfTheRowWithANullCategory = TestValues.NewProductName();
         _createdItemIds.Add(await AddToInventoryAsync(
             nameOfTheRowWithANullCategory,
@@ -166,7 +172,8 @@ public sealed class IntegrationInventoryTests : IAsyncDisposable
 
         // Act
         var response = await _client.GetAsync(
-            $"/odata/CatalogProducts?$filter=not startswith(Category,'{uppercaseMarker}')",
+            NegatedStringFunctionFilter(
+                ODataProtocolConstants.StartsWithFunction, nameof(CatalogProduct.Category), uppercaseMarker),
             TestContext.Current.CancellationToken);
 
         // Assert
@@ -175,12 +182,23 @@ public sealed class IntegrationInventoryTests : IAsyncDisposable
         Assert.Contains(nameOfTheRowWithANullCategory, body, StringComparison.Ordinal);
     }
 
-    [Theory]
-    [InlineData("/odata/Products")]
-    [InlineData("/odata/Products(00000000-0000-0000-0000-000000000001)")]
-    public async Task RetiredProductsSurface_IsNotRouted(string path)
+    [Fact]
+    public async Task RetiredProductsCollection_IsNotRouted()
     {
-        var response = await _client.GetAsync(path, TestContext.Current.CancellationToken);
+        var response = await _client.GetAsync(
+            ODataQueryParameterTransformer.RetiredProductsPath, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task RetiredProductsKeyedRoute_IsNotRouted()
+    {
+        var retiredProductId = Guid.NewGuid();
+
+        var response = await _client.GetAsync(
+            $"{ODataQueryParameterTransformer.RetiredProductsPath}({retiredProductId})",
+            TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -189,21 +207,30 @@ public sealed class IntegrationInventoryTests : IAsyncDisposable
     {
         foreach (var id in _createdItemIds)
         {
-            await _client.DeleteAsync($"/odata/InventoryItems({id})", CancellationToken.None);
+            await _client.DeleteAsync(
+                $"{ODataQueryParameterTransformer.InventoryItemsPath}({id})", CancellationToken.None);
         }
 
         _client.Dispose();
     }
 
+    private static string JsonPropertyName(string memberName) =>
+        JsonNamingPolicy.CamelCase.ConvertName(memberName);
+
+    private static string NegatedStringFunctionFilter(string function, string propertyName, string marker) =>
+        $"{ODataQueryParameterTransformer.CatalogProductsPath}" +
+        $"?{ODataQueryParameterTransformer.FilterQueryOption}=" +
+        $"{ODataProtocolConstants.NotOperator} {function}({propertyName},'{marker}')";
+
     private async Task<Guid> GetCatalogProductIdAsync(Guid itemId)
     {
-        var response = await _client.GetAsync("/inventory/items", TestContext.Current.CancellationToken);
+        var response = await _client.GetAsync(ODataQueryParameterTransformer.AddToInventoryPath, TestContext.Current.CancellationToken);
         response.EnsureSuccessStatusCode();
         var items = await response.Content.ReadFromJsonAsync<JsonElement>(
             TestContext.Current.CancellationToken);
         return items.EnumerateArray()
-            .Single(i => i.GetProperty("id").GetGuid() == itemId)
-            .GetProperty("catalogProductId")
+            .Single(i => i.GetProperty(JsonPropertyName(nameof(InventoryItemView.Id))).GetGuid() == itemId)
+            .GetProperty(JsonPropertyName(nameof(InventoryItemView.CatalogProductId)))
             .GetGuid();
     }
 
@@ -214,7 +241,7 @@ public sealed class IntegrationInventoryTests : IAsyncDisposable
         string serialNumber)
     {
         var response = await _client.PostAsJsonAsync(
-            "/inventory/items",
+            ODataQueryParameterTransformer.AddToInventoryPath,
             new
             {
                 name,
@@ -227,6 +254,6 @@ public sealed class IntegrationInventoryTests : IAsyncDisposable
 
         var body = await response.Content.ReadFromJsonAsync<JsonElement>(
             TestContext.Current.CancellationToken);
-        return body.GetProperty("id").GetGuid();
+        return body.GetProperty(JsonPropertyName(nameof(InventoryItemView.Id))).GetGuid();
     }
 }

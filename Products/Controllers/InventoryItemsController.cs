@@ -28,6 +28,7 @@ public class InventoryItemsController : ODataController
 
     [HttpGet]
     [MongoEnableQuery(HandleNullPropagation = HandleNullPropagationOption.False)]
+    [MaterializeODataList]
     public ActionResult<IQueryable<InventoryItem>> Get(ODataQueryOptions<InventoryItem> queryOptions)
     {
         if (CurrentUserId is not Guid ownerId)

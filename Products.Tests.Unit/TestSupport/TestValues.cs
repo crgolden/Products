@@ -18,4 +18,18 @@ internal static class TestValues
     internal static string NewModelErrorKey() => LowercaseToken(8);
 
     internal static string NewModelErrorMessage() => $"invalid-{LowercaseToken(10)}";
+
+    internal static string NewOpenApiDocumentName() => LowercaseToken(4);
+
+    internal static string NewBlank() => new string(' ', Random.Shared.Next(1, 4));
+
+    internal static string NewMalformedGuid() => $"{LowercaseToken(8)}-{LowercaseToken(4)}";
+
+    internal static string NewUppercaseMarker() => LowercaseToken(4).ToUpperInvariant();
+
+    internal static string NewTimeoutMessage() => $"timeout-{LowercaseToken(10)}";
+
+    internal static string NewUppercaseSortingName() => $"Z{NewProductName()}";
+
+    internal static string NewLowercaseSortingName() => $"a{NewProductName()}";
 }

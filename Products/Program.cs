@@ -148,8 +148,8 @@ try
     builder.Services.AddControllers().AddOData(oDataOptions =>
     {
         var modelBuilder = new ODataConventionModelBuilder();
-        modelBuilder.EntitySet<CatalogProduct>("CatalogProducts");
-        modelBuilder.EntitySet<InventoryItem>("InventoryItems");
+        modelBuilder.EntitySet<CatalogProduct>(CatalogProduct.EntitySetName);
+        modelBuilder.EntitySet<InventoryItem>(InventoryItem.EntitySetName);
         modelBuilder.EntityType<CatalogProduct>().Ignore(c => c.MatchKey);
         modelBuilder.Ignore<AddToInventoryRequest>();
         var model = modelBuilder.GetEdmModel();
