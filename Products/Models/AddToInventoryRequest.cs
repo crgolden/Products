@@ -1,5 +1,8 @@
 namespace Products.Models;
 
+using JetBrains.Annotations;
+
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public class AddToInventoryRequest
 {
     public string? Name { get; set; }

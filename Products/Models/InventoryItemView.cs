@@ -1,5 +1,8 @@
 namespace Products.Models;
 
+using JetBrains.Annotations;
+
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public class InventoryItemView
 {
 #pragma warning disable S6964 // nullable is not appropriate for the key, the catalog pointer, or a timestamp that must be present on every record

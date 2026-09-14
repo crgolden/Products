@@ -1,5 +1,8 @@
 namespace Products.Models;
 
+using JetBrains.Annotations;
+
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public class CatalogProduct
 {
     internal const string EntitySetName = "CatalogProducts";
