@@ -17,15 +17,20 @@ using Products.Tests.Unit.TestSupport;
 public class CatalogProductsControllerTests
 {
     private readonly Mock<IMongoCollection<CatalogProduct>> _mockCollection;
+    private readonly Mock<IMongoCollection<InventoryItem>> _mockInventoryItems;
     private readonly CatalogProductsController _controller;
 
     public CatalogProductsControllerTests()
     {
         _mockCollection = new Mock<IMongoCollection<CatalogProduct>>(MockBehavior.Strict);
+        _mockInventoryItems = new Mock<IMongoCollection<InventoryItem>>(MockBehavior.Strict);
         var mockDatabase = new Mock<IMongoDatabase>(MockBehavior.Strict);
         mockDatabase
             .Setup(d => d.GetCollection<CatalogProduct>(CatalogProductIndexInitializer.CollectionName, null))
             .Returns(_mockCollection.Object);
+        mockDatabase
+            .Setup(d => d.GetCollection<InventoryItem>(InventoryItemIndexInitializer.CollectionName, null))
+            .Returns(_mockInventoryItems.Object);
         _controller = new CatalogProductsController(mockDatabase.Object);
     }
 
@@ -161,6 +166,56 @@ public class CatalogProductsControllerTests
             _controller.Post(input, TestContext.Current.CancellationToken));
     }
 
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task Delete_ReturnsConflict_WhenAnInventoryItemStillReferencesTheCatalogProduct()
+    {
+        var referencedCatalogProductId = Guid.NewGuid();
+        SetupInventoryItemsFindReturns([new InventoryItem { CatalogProductId = referencedCatalogProductId }]);
+
+        var result = await _controller.Delete(referencedCatalogProductId, TestContext.Current.CancellationToken);
+
+        Assert.IsType<ConflictResult>(result);
+        _mockCollection.Verify(
+            c => c.FindOneAndDeleteAsync(
+                It.IsAny<FilterDefinition<CatalogProduct>>(),
+                It.IsAny<FindOneAndDeleteOptions<CatalogProduct, CatalogProduct>>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task Delete_ReturnsNotFound_WhenNoCatalogProductMatched()
+    {
+        var missingCatalogProductId = Guid.NewGuid();
+        SetupInventoryItemsFindReturns([]);
+        SetupFindOneAndDeleteMatchesNothing();
+
+        var result = await _controller.Delete(missingCatalogProductId, TestContext.Current.CancellationToken);
+
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Fact]
+    [Trait("Category", "Unit")]
+    public async Task Delete_ReturnsNoContent_WhenTheCatalogProductWasDeleted()
+    {
+        var catalogProductId = Guid.NewGuid();
+        SetupInventoryItemsFindReturns([]);
+        SetupFindOneAndDeleteReturns(new CatalogProduct
+        {
+            Id = catalogProductId,
+            Name = TestValues.NewProductName(),
+            Brand = TestValues.NewBrand(),
+            ModelNumber = TestValues.NewModelNumber(),
+        });
+
+        var result = await _controller.Delete(catalogProductId, TestContext.Current.CancellationToken);
+
+        Assert.IsType<NoContentResult>(result);
+    }
+
     private static MongoWriteException WriteExceptionWithoutADuplicateKey()
     {
         var serverId = new ServerId(new ClusterId(), new DnsEndPoint(MongoEndpointConstants.LoopbackHost, MongoEndpointConstants.DefaultPort));
@@ -174,6 +229,41 @@ public class CatalogProductsControllerTests
                 It.IsAny<InsertOneOptions>(),
                 It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
+
+    private void SetupInventoryItemsFindReturns(IList<InventoryItem> inventoryItems)
+    {
+        var mockCursor = new Mock<IAsyncCursor<InventoryItem>>(MockBehavior.Strict);
+        mockCursor
+            .SetupSequence(c => c.MoveNextAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(inventoryItems.Count > 0)
+            .ReturnsAsync(false);
+        mockCursor
+            .Setup(c => c.Current)
+            .Returns(inventoryItems);
+        mockCursor.Setup(c => c.Dispose());
+        _mockInventoryItems
+            .Setup(c => c.FindAsync(
+                It.IsAny<FilterDefinition<InventoryItem>>(),
+                It.IsAny<FindOptions<InventoryItem, InventoryItem>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(mockCursor.Object);
+    }
+
+    private void SetupFindOneAndDeleteReturns(CatalogProduct deleted) =>
+        _mockCollection
+            .Setup(c => c.FindOneAndDeleteAsync(
+                It.IsAny<FilterDefinition<CatalogProduct>>(),
+                It.IsAny<FindOneAndDeleteOptions<CatalogProduct, CatalogProduct>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(deleted);
+
+    private void SetupFindOneAndDeleteMatchesNothing() =>
+        _mockCollection
+            .Setup(c => c.FindOneAndDeleteAsync(
+                It.IsAny<FilterDefinition<CatalogProduct>>(),
+                It.IsAny<FindOneAndDeleteOptions<CatalogProduct, CatalogProduct>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(default(CatalogProduct));
 
     private void SetupFindReturns(IList<CatalogProduct> catalogProducts)
     {
