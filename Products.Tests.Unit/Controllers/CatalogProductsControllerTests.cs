@@ -4,6 +4,7 @@ using System.Net;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Deltas;
 using Microsoft.AspNetCore.OData.Results;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.Core.Clusters;
 using MongoDB.Driver.Core.Connections;
@@ -171,7 +172,7 @@ public class CatalogProductsControllerTests
     public async Task Delete_ReturnsConflict_WhenAnInventoryItemStillReferencesTheCatalogProduct()
     {
         var referencedCatalogProductId = Guid.NewGuid();
-        SetupInventoryItemsFindReturns([new InventoryItem { CatalogProductId = referencedCatalogProductId }]);
+        SetupInventoryItemsFindReturns([new BsonDocument()]);
 
         var result = await _controller.Delete(referencedCatalogProductId, TestContext.Current.CancellationToken);
 
@@ -230,21 +231,21 @@ public class CatalogProductsControllerTests
                 It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-    private void SetupInventoryItemsFindReturns(IList<InventoryItem> inventoryItems)
+    private void SetupInventoryItemsFindReturns(IList<BsonDocument> referencingItems)
     {
-        var mockCursor = new Mock<IAsyncCursor<InventoryItem>>(MockBehavior.Strict);
+        var mockCursor = new Mock<IAsyncCursor<BsonDocument>>(MockBehavior.Strict);
         mockCursor
             .SetupSequence(c => c.MoveNextAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(inventoryItems.Count > 0)
+            .ReturnsAsync(referencingItems.Count > 0)
             .ReturnsAsync(false);
         mockCursor
             .Setup(c => c.Current)
-            .Returns(inventoryItems);
+            .Returns(referencingItems);
         mockCursor.Setup(c => c.Dispose());
         _mockInventoryItems
             .Setup(c => c.FindAsync(
                 It.IsAny<FilterDefinition<InventoryItem>>(),
-                It.IsAny<FindOptions<InventoryItem, InventoryItem>>(),
+                It.IsAny<FindOptions<InventoryItem, BsonDocument>>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(mockCursor.Object);
     }
