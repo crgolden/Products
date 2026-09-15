@@ -51,7 +51,10 @@ public class InventoryItemsControllerAuthorizationTests
     [Trait("Category", "Unit")]
     public void CatalogProductsController_DeleteAction_IsNotAnonymous()
     {
-        Assert.Null(CatalogDeleteAction()?.GetCustomAttribute<AllowAnonymousAttribute>());
+        var delete = CatalogDeleteAction();
+
+        Assert.NotNull(delete);
+        Assert.Null(delete.GetCustomAttribute<AllowAnonymousAttribute>());
     }
 
     private static MethodInfo? CatalogDeleteAction() =>
