@@ -13,7 +13,9 @@ public sealed class MaterializeODataListAttribute : ResultFilterAttribute
             return;
         }
 
-        var materialized = (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(queryable.ElementType))!;
+        var listType = typeof(List<>).MakeGenericType(queryable.ElementType);
+        var materialized = Activator.CreateInstance(listType) as IList
+            ?? throw new InvalidOperationException($"Could not create a list of {queryable.ElementType}.");
         foreach (var item in queryable)
         {
             materialized.Add(item);

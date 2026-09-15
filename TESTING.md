@@ -38,7 +38,7 @@ dotnet build Products.Tests.Unit --configuration Debug
 .\Products.Tests.Unit\bin\Debug\net10.0\Products.Tests.Unit.exe -trait "Category=Integration" -showLiveOutput
 ```
 
-> **Data isolation:** integration tests write to the configured `MongoDatabaseName` database using `OwnerId` = `ProductsWebApplicationFactory.TestUserId` (`00000000-0000-0000-0001-000000000001`) and clean up every document in `IAsyncDisposable.DisposeAsync`. Concurrent runs against the same database are not supported.
+> **Data isolation:** integration tests write to the configured `MongoDatabaseName` database using `OwnerId` = `ProductsWebApplicationFactory.TestUserId`, which is generated per run (`Guid.NewGuid()`), and delete the item ids they recorded in `IAsyncDisposable.DisposeAsync` — not every document in the database. **Concurrent runs against the same database are still not supported**: inventory rows are owner-scoped, but the catalog rows `AddToInventory` find-or-creates are not, and that path is a `MatchKey` upsert, so two runs contend on the same catalog documents regardless of owner.
 
 ---
 
@@ -50,7 +50,7 @@ dotnet build Products.Tests.Unit --configuration Debug
 
 ### `IntegrationAuthHandler`
 
-An `AuthenticationHandler` registered as the default scheme by `ProductsWebApplicationFactory`. Always succeeds and returns a principal whose `sub` claim is `ProductsWebApplicationFactory.TestUserId` (`00000000-0000-0000-0001-000000000001`) and whose `scope` claim contains `products`. This satisfies the `Products` authorization policy and ensures `OwnerId` filtering produces deterministic results.
+An `AuthenticationHandler` registered as the default scheme by `ProductsWebApplicationFactory`. Always succeeds and returns a principal whose `sub` claim is `ProductsWebApplicationFactory.TestUserId` (generated per run) and whose `scope` claim contains `products`. This satisfies the `Products` authorization policy and ensures `OwnerId` filtering produces deterministic results.
 
 ### `IntegrationCollection`
 

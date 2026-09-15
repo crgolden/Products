@@ -30,26 +30,30 @@ public class MaterializeODataListAttributeTests
     [Trait("Category", "Unit")]
     public void AListResult_IsReplacedByAMaterialisedListOfTheSameElementType()
     {
-        var rows = new[] { new CatalogProduct { Id = Guid.NewGuid() }, new CatalogProduct { Id = Guid.NewGuid() } };
+        var firstProductId = Guid.NewGuid();
+        var secondProductId = Guid.NewGuid();
+        var rows = new[] { new CatalogProduct { Id = firstProductId }, new CatalogProduct { Id = secondProductId } };
         var result = new ObjectResult(rows.AsQueryable());
         var context = ResultExecuting(result);
 
         new MaterializeODataListAttribute().OnResultExecuting(context);
 
-        Assert.IsType<List<CatalogProduct>>(result.Value);
-        Assert.Equal(rows.Length, ((IList)result.Value!).Count);
+        var materialized = Assert.IsType<List<CatalogProduct>>(result.Value);
+        Assert.Equal(rows.Length, materialized.Count);
     }
 
     [Fact]
     [Trait("Category", "Unit")]
     public void AResultThatIsNotAQueryable_IsLeftAlone()
     {
-        var result = new ObjectResult(new CatalogProduct { Id = Guid.NewGuid() });
+        var productId = Guid.NewGuid();
+        var result = new ObjectResult(new CatalogProduct { Id = productId });
         var context = ResultExecuting(result);
 
         new MaterializeODataListAttribute().OnResultExecuting(context);
 
-        Assert.IsType<CatalogProduct>(result.Value);
+        var unchanged = Assert.IsType<CatalogProduct>(result.Value);
+        Assert.Equal(productId, unchanged.Id);
     }
 
     [Fact]

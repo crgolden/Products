@@ -8,9 +8,9 @@ using Products.Authorization;
 
 public sealed class ProductsWebApplicationFactory : WebApplicationFactory<Program>
 {
-    internal const string TestScheme = "Integration";
+    internal static readonly string TestScheme = Guid.NewGuid().ToString();
 
-    internal static readonly Guid TestUserId = new("00000000-0000-0000-0001-000000000001");
+    internal static readonly Guid TestUserId = Guid.NewGuid();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
