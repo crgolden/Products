@@ -39,11 +39,14 @@ public class CatalogProductsControllerTests
     [Trait("Category", "Unit")]
     public async Task GetByKey_ReturnsEmptySingleResult_WhenTheCatalogProductDoesNotExist()
     {
+        // Arrange
         var missingCatalogProductId = Guid.NewGuid();
         SetupFindReturns([]);
 
+        // Act
         var result = await _controller.Get(missingCatalogProductId, TestContext.Current.CancellationToken);
 
+        // Assert
         Assert.Empty(result.Queryable);
     }
 
@@ -51,6 +54,7 @@ public class CatalogProductsControllerTests
     [Trait("Category", "Unit")]
     public async Task Post_ComputesTheMatchKey_SoTheUniqueIndexCanDeduplicate()
     {
+        // Arrange
         var brand = TestValues.NewBrand();
         var modelNumber = TestValues.NewModelNumber();
         SetupInsertSucceeds();
@@ -61,8 +65,10 @@ public class CatalogProductsControllerTests
             ModelNumber = modelNumber,
         };
 
+        // Act
         var result = await _controller.Post(input, TestContext.Current.CancellationToken);
 
+        // Assert
         Assert.IsType<CreatedODataResult<CatalogProduct>>(result);
         Assert.Equal(CatalogProductMatchKey.Compute(brand, modelNumber), input.MatchKey);
     }
@@ -71,6 +77,7 @@ public class CatalogProductsControllerTests
     [Trait("Category", "Unit")]
     public async Task Post_LeavesTheMatchKeyNull_WhenTheBrandIsMissing()
     {
+        // Arrange
         SetupInsertSucceeds();
         var input = new CatalogProduct
         {
@@ -78,8 +85,10 @@ public class CatalogProductsControllerTests
             ModelNumber = TestValues.NewModelNumber(),
         };
 
+        // Act
         await _controller.Post(input, TestContext.Current.CancellationToken);
 
+        // Assert
         Assert.Null(input.MatchKey);
     }
 
@@ -87,6 +96,7 @@ public class CatalogProductsControllerTests
     [Trait("Category", "Unit")]
     public async Task Post_NeverTrustsAClientSuppliedMatchKey()
     {
+        // Arrange
         var brand = TestValues.NewBrand();
         var modelNumber = TestValues.NewModelNumber();
         var spoofedMatchKey = TestValues.NewModelNumber();
@@ -98,8 +108,10 @@ public class CatalogProductsControllerTests
             MatchKey = spoofedMatchKey,
         };
 
+        // Act
         await _controller.Post(input, TestContext.Current.CancellationToken);
 
+        // Assert
         Assert.NotEqual(spoofedMatchKey, input.MatchKey);
         Assert.Equal(CatalogProductMatchKey.Compute(brand, modelNumber), input.MatchKey);
     }
@@ -108,14 +120,17 @@ public class CatalogProductsControllerTests
     [Trait("Category", "Unit")]
     public async Task Patch_ReturnsNotFound_WhenTheCatalogProductDoesNotExist()
     {
+        // Arrange
         SetupFindReturns([]);
         var catalogProductId = Guid.NewGuid();
 
+        // Act
         var result = await _controller.Patch(
             catalogProductId,
             new Delta<CatalogProduct>(),
             TestContext.Current.CancellationToken);
 
+        // Assert
         Assert.IsType<NotFoundResult>(result);
     }
 
@@ -123,6 +138,7 @@ public class CatalogProductsControllerTests
     [Trait("Category", "Unit")]
     public async Task Patch_DoesNotTurnAnUnrelatedWriteErrorIntoAConflict()
     {
+        // Arrange
         var catalogProductId = Guid.NewGuid();
         var existing = new CatalogProduct
         {
@@ -140,16 +156,21 @@ public class CatalogProductsControllerTests
                 It.IsAny<CancellationToken>()))
             .ThrowsAsync(WriteExceptionWithoutADuplicateKey());
 
-        await Assert.ThrowsAsync<MongoWriteException>(() => _controller.Patch(
+        // Act
+        var exception = await Record.ExceptionAsync(() => _controller.Patch(
             existing.Id,
             new Delta<CatalogProduct>(),
             TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.IsType<MongoWriteException>(exception);
     }
 
     [Fact]
     [Trait("Category", "Unit")]
     public async Task Post_DoesNotTurnAnUnrelatedWriteErrorIntoAConflict()
     {
+        // Arrange
         _mockCollection
             .Setup(c => c.InsertOneAsync(
                 It.IsAny<CatalogProduct>(),
@@ -163,19 +184,26 @@ public class CatalogProductsControllerTests
             ModelNumber = TestValues.NewModelNumber(),
         };
 
-        await Assert.ThrowsAsync<MongoWriteException>(() =>
+        // Act
+        var exception = await Record.ExceptionAsync(() =>
             _controller.Post(input, TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.IsType<MongoWriteException>(exception);
     }
 
     [Fact]
     [Trait("Category", "Unit")]
     public async Task Delete_ReturnsConflict_WhenAnInventoryItemStillReferencesTheCatalogProduct()
     {
+        // Arrange
         var referencedCatalogProductId = Guid.NewGuid();
         SetupInventoryItemsFindReturns([new BsonDocument()]);
 
+        // Act
         var result = await _controller.Delete(referencedCatalogProductId, TestContext.Current.CancellationToken);
 
+        // Assert
         Assert.IsType<ConflictResult>(result);
         _mockCollection.Verify(
             c => c.FindOneAndDeleteAsync(
@@ -189,12 +217,15 @@ public class CatalogProductsControllerTests
     [Trait("Category", "Unit")]
     public async Task Delete_ReturnsNotFound_WhenNoCatalogProductMatched()
     {
+        // Arrange
         var missingCatalogProductId = Guid.NewGuid();
         SetupInventoryItemsFindReturns([]);
         SetupFindOneAndDeleteMatchesNothing();
 
+        // Act
         var result = await _controller.Delete(missingCatalogProductId, TestContext.Current.CancellationToken);
 
+        // Assert
         Assert.IsType<NotFoundResult>(result);
     }
 
@@ -202,6 +233,7 @@ public class CatalogProductsControllerTests
     [Trait("Category", "Unit")]
     public async Task Delete_ReturnsNoContent_WhenTheCatalogProductWasDeleted()
     {
+        // Arrange
         var catalogProductId = Guid.NewGuid();
         SetupInventoryItemsFindReturns([]);
         SetupFindOneAndDeleteReturns(new CatalogProduct
@@ -212,8 +244,10 @@ public class CatalogProductsControllerTests
             ModelNumber = TestValues.NewModelNumber(),
         });
 
+        // Act
         var result = await _controller.Delete(catalogProductId, TestContext.Current.CancellationToken);
 
+        // Assert
         Assert.IsType<NoContentResult>(result);
     }
 

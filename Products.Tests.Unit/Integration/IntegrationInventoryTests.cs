@@ -185,21 +185,26 @@ public sealed class IntegrationInventoryTests : IAsyncDisposable
     [Fact]
     public async Task RetiredProductsCollection_IsNotRouted()
     {
+        // Act
         var response = await _client.GetAsync(
             ODataQueryParameterTransformer.RetiredProductsPath, TestContext.Current.CancellationToken);
 
+        // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
     public async Task RetiredProductsKeyedRoute_IsNotRouted()
     {
+        // Arrange
         var retiredProductId = Guid.NewGuid();
 
+        // Act
         var response = await _client.GetAsync(
             $"{ODataQueryParameterTransformer.RetiredProductsPath}({retiredProductId})",
             TestContext.Current.CancellationToken);
 
+        // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 

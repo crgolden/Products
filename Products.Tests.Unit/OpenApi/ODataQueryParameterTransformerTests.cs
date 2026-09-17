@@ -26,11 +26,14 @@ public sealed class ODataQueryParameterTransformerTests
     [Fact]
     public async Task TransformAsync_WithEmptyDocument_AddsBearerAndTheThreeSurvivingPaths()
     {
+        // Arrange
         var transformer = new ODataQueryParameterTransformer();
         var document = new OpenApiDocument();
 
+        // Act
         await transformer.TransformAsync(document, Context, CancellationToken.None);
 
+        // Assert
         Assert.True(document.Components?.SecuritySchemes?.ContainsKey(ODataQueryParameterTransformer.BearerSecuritySchemeName));
         Assert.Equal(SingleSecurityRequirement, document.Security?.Count);
         Assert.True(document.Paths?.ContainsKey(ODataQueryParameterTransformer.CatalogProductsPath));
@@ -41,11 +44,14 @@ public sealed class ODataQueryParameterTransformerTests
     [Fact]
     public async Task TransformAsync_DoesNotDocumentTheRetiredProductsSurface()
     {
+        // Arrange
         var transformer = new ODataQueryParameterTransformer();
         var document = new OpenApiDocument();
 
+        // Act
         await transformer.TransformAsync(document, Context, CancellationToken.None);
 
+        // Assert
         Assert.NotNull(document.Paths);
         Assert.DoesNotContain(
             document.Paths.Keys,
@@ -55,11 +61,14 @@ public sealed class ODataQueryParameterTransformerTests
     [Fact]
     public async Task TransformAsync_CatalogListPath_DeclaresEveryListQueryOption()
     {
+        // Arrange
         var transformer = new ODataQueryParameterTransformer();
         var document = new OpenApiDocument();
 
+        // Act
         await transformer.TransformAsync(document, Context, CancellationToken.None);
 
+        // Assert
         var parameters = document.Paths?[ODataQueryParameterTransformer.CatalogProductsPath]?.Operations?[HttpMethod.Get]?.Parameters;
         Assert.NotNull(parameters);
         Assert.Equal(ODataQueryParameterTransformer.ListQueryOptions.Length, parameters.Count);
@@ -69,11 +78,14 @@ public sealed class ODataQueryParameterTransformerTests
     [MemberData(nameof(ListQueryOptions))]
     public async Task TransformAsync_CatalogListPath_DeclaresTheQueryOption(string queryOption)
     {
+        // Arrange
         var transformer = new ODataQueryParameterTransformer();
         var document = new OpenApiDocument();
 
+        // Act
         await transformer.TransformAsync(document, Context, CancellationToken.None);
 
+        // Assert
         var parameters = document.Paths?[ODataQueryParameterTransformer.CatalogProductsPath]?.Operations?[HttpMethod.Get]?.Parameters;
         Assert.NotNull(parameters);
         Assert.Contains(parameters, p => string.Equals(p.Name, queryOption, StringComparison.Ordinal));
@@ -82,19 +94,24 @@ public sealed class ODataQueryParameterTransformerTests
     [Fact]
     public void ListQueryOptions_AreTheODataV4SystemQueryOptionNames()
     {
-        Assert.Equal(
-            ["$filter", "$select", "$orderby", "$top", "$skip", "$count", "$expand"],
-            ODataQueryParameterTransformer.ListQueryOptions);
+        // Act
+        var queryOptions = ODataQueryParameterTransformer.ListQueryOptions;
+
+        // Assert
+        Assert.Equal(["$filter", "$select", "$orderby", "$top", "$skip", "$count", "$expand"], queryOptions);
     }
 
     [Fact]
     public async Task TransformAsync_CatalogRead_SecurityIsAnEmptyList_SoItOptsOutOfTheDocumentBearer()
     {
+        // Arrange
         var transformer = new ODataQueryParameterTransformer();
         var document = new OpenApiDocument();
 
+        // Act
         await transformer.TransformAsync(document, Context, CancellationToken.None);
 
+        // Assert
         var get = document.Paths?[ODataQueryParameterTransformer.CatalogProductsPath]?.Operations?[HttpMethod.Get];
         Assert.NotNull(get);
         Assert.NotNull(get.Security);
@@ -104,11 +121,14 @@ public sealed class ODataQueryParameterTransformerTests
     [Fact]
     public async Task TransformAsync_InventoryRead_SecurityIsNull_SoItInheritsTheDocumentBearer()
     {
+        // Arrange
         var transformer = new ODataQueryParameterTransformer();
         var document = new OpenApiDocument();
 
+        // Act
         await transformer.TransformAsync(document, Context, CancellationToken.None);
 
+        // Assert
         var get = document.Paths?[ODataQueryParameterTransformer.InventoryItemsPath]?.Operations?[HttpMethod.Get];
         Assert.NotNull(get);
         Assert.Null(get.Security);
@@ -119,11 +139,14 @@ public sealed class ODataQueryParameterTransformerTests
     [InlineData(ODataQueryParameterTransformer.AddToInventoryPath)]
     public async Task TransformAsync_InventoryOperations_InheritTheDocumentBearerRequirement(string path)
     {
+        // Arrange
         var transformer = new ODataQueryParameterTransformer();
         var document = new OpenApiDocument();
 
+        // Act
         await transformer.TransformAsync(document, Context, CancellationToken.None);
 
+        // Assert
         var operations = document.Paths?[path]?.Operations;
         Assert.NotNull(operations);
         Assert.All(operations.Values, o => Assert.Null(o.Security));
@@ -132,6 +155,7 @@ public sealed class ODataQueryParameterTransformerTests
     [Fact]
     public async Task TransformAsync_WithBearerAlreadyPresent_DoesNotDuplicate()
     {
+        // Arrange
         var transformer = new ODataQueryParameterTransformer();
         var document = new OpenApiDocument
         {
@@ -152,8 +176,10 @@ public sealed class ODataQueryParameterTransformerTests
             ],
         };
 
+        // Act
         await transformer.TransformAsync(document, Context, CancellationToken.None);
 
+        // Assert
         Assert.Single(document.Components.SecuritySchemes);
         Assert.Single(document.Security);
     }
@@ -161,6 +187,7 @@ public sealed class ODataQueryParameterTransformerTests
     [Fact]
     public async Task TransformAsync_WithBothPathsAlreadyPresent_DoesNotModifyThem()
     {
+        // Arrange
         var transformer = new ODataQueryParameterTransformer();
         var catalogPathItem = new OpenApiPathItem();
         var inventoryPathItem = new OpenApiPathItem();
@@ -173,8 +200,10 @@ public sealed class ODataQueryParameterTransformerTests
             },
         };
 
+        // Act
         await transformer.TransformAsync(document, Context, CancellationToken.None);
 
+        // Assert
         Assert.Same(catalogPathItem, document.Paths[ODataQueryParameterTransformer.CatalogProductsPath]);
         Assert.Same(inventoryPathItem, document.Paths[ODataQueryParameterTransformer.InventoryItemsPath]);
     }

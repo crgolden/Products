@@ -35,10 +35,13 @@ public class InventoryItemsControllerTests
     [Trait("Category", "Unit")]
     public void Get_ReturnsUnauthorized_WhenThereIsNoSubClaim()
     {
+        // Arrange
         _controller.ControllerContext = MakeControllerContext(userId: null);
 
+        // Act
         var result = _controller.Get(EmptyQueryOptions());
 
+        // Assert
         Assert.IsType<UnauthorizedResult>(result.Result);
     }
 
@@ -46,10 +49,13 @@ public class InventoryItemsControllerTests
     [Trait("Category", "Unit")]
     public void Get_ReturnsUnauthorized_WhenTheSubClaimIsNotAGuid()
     {
+        // Arrange
         _controller.ControllerContext = MakeControllerContextWithSubject(TestValues.NewMalformedGuid());
 
+        // Act
         var result = _controller.Get(EmptyQueryOptions());
 
+        // Assert
         Assert.IsType<UnauthorizedResult>(result.Result);
     }
 
@@ -57,11 +63,14 @@ public class InventoryItemsControllerTests
     [Trait("Category", "Unit")]
     public async Task GetByKey_ReturnsUnauthorized_WhenThereIsNoSubClaim()
     {
+        // Arrange
         _controller.ControllerContext = MakeControllerContext(userId: null);
         var itemId = Guid.NewGuid();
 
+        // Act
         var result = await _controller.Get(itemId, TestContext.Current.CancellationToken);
 
+        // Assert
         Assert.IsType<UnauthorizedResult>(result.Result);
     }
 
@@ -69,6 +78,7 @@ public class InventoryItemsControllerTests
     [Trait("Category", "Unit")]
     public async Task Post_SetsOwnerIdFromTheClaim_AndNeverTrustsTheBody()
     {
+        // Arrange
         var ownerId = Guid.NewGuid();
         var spoofedOwnerId = Guid.NewGuid();
         _controller.ControllerContext = MakeControllerContext(ownerId);
@@ -81,8 +91,10 @@ public class InventoryItemsControllerTests
             SerialNumber = TestValues.NewModelNumber(),
         };
 
+        // Act
         var result = await _controller.Post(input, TestContext.Current.CancellationToken);
 
+        // Assert
         Assert.IsType<CreatedODataResult<InventoryItem>>(result);
         Assert.Equal(ownerId, input.OwnerId);
         Assert.NotEqual(spoofedOwnerId, input.OwnerId);
@@ -92,12 +104,15 @@ public class InventoryItemsControllerTests
     [Trait("Category", "Unit")]
     public async Task Post_ReturnsUnauthorized_WhenThereIsNoSubClaim()
     {
+        // Arrange
         _controller.ControllerContext = MakeControllerContext(userId: null);
         var catalogProductId = Guid.NewGuid();
         var input = new InventoryItem { CatalogProductId = catalogProductId };
 
+        // Act
         var result = await _controller.Post(input, TestContext.Current.CancellationToken);
 
+        // Assert
         Assert.IsType<UnauthorizedResult>(result);
     }
 
@@ -105,16 +120,19 @@ public class InventoryItemsControllerTests
     [Trait("Category", "Unit")]
     public async Task Patch_ReturnsNotFound_WhenTheItemBelongsToAnotherOwner()
     {
+        // Arrange
         var signedInOwnerId = Guid.NewGuid();
         _controller.ControllerContext = MakeControllerContext(signedInOwnerId);
         SetupFindReturns([]);
         var itemId = Guid.NewGuid();
 
+        // Act
         var result = await _controller.Patch(
             itemId,
             new Delta<InventoryItem>(),
             TestContext.Current.CancellationToken);
 
+        // Assert
         Assert.IsType<NotFoundResult>(result);
     }
 
@@ -122,14 +140,17 @@ public class InventoryItemsControllerTests
     [Trait("Category", "Unit")]
     public async Task Delete_ReturnsNotFound_WhenNothingMatchedTheOwnerScopedFilter()
     {
+        // Arrange
         var signedInOwnerId = Guid.NewGuid();
         _controller.ControllerContext = MakeControllerContext(signedInOwnerId);
         SetupDeleteReturns(0);
 
         var itemId = Guid.NewGuid();
 
+        // Act
         var result = await _controller.Delete(itemId, TestContext.Current.CancellationToken);
 
+        // Assert
         Assert.IsType<NotFoundResult>(result);
     }
 
@@ -137,14 +158,17 @@ public class InventoryItemsControllerTests
     [Trait("Category", "Unit")]
     public async Task Delete_ReturnsNoContent_WhenTheOwnerScopedFilterMatched()
     {
+        // Arrange
         var signedInOwnerId = Guid.NewGuid();
         _controller.ControllerContext = MakeControllerContext(signedInOwnerId);
         SetupDeleteReturns(1);
 
         var itemId = Guid.NewGuid();
 
+        // Act
         var result = await _controller.Delete(itemId, TestContext.Current.CancellationToken);
 
+        // Assert
         Assert.IsType<NoContentResult>(result);
     }
 

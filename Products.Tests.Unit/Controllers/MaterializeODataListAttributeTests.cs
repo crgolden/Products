@@ -16,10 +16,13 @@ public class MaterializeODataListAttributeTests
     [Trait("Category", "Unit")]
     public void AProviderFailure_SurfacesBeforeTheResponseStarts_RatherThanTruncatingA200()
     {
+        // Arrange
         var context = ResultExecuting(new ObjectResult(new ThrowingQueryable<CatalogProduct>()));
 
+        // Act
         var thrown = Record.Exception(() => new MaterializeODataListAttribute().OnResultExecuting(context));
 
+        // Assert
         Assert.IsType<InvalidOperationException>(thrown);
         Assert.False(
             context.HttpContext.Response.HasStarted,
@@ -30,14 +33,17 @@ public class MaterializeODataListAttributeTests
     [Trait("Category", "Unit")]
     public void AListResult_IsReplacedByAMaterialisedListOfTheSameElementType()
     {
+        // Arrange
         var firstProductId = Guid.NewGuid();
         var secondProductId = Guid.NewGuid();
         var rows = new[] { new CatalogProduct { Id = firstProductId }, new CatalogProduct { Id = secondProductId } };
         var result = new ObjectResult(rows.AsQueryable());
         var context = ResultExecuting(result);
 
+        // Act
         new MaterializeODataListAttribute().OnResultExecuting(context);
 
+        // Assert
         var materialized = Assert.IsType<List<CatalogProduct>>(result.Value);
         Assert.Equal(rows.Length, materialized.Count);
     }
@@ -46,12 +52,15 @@ public class MaterializeODataListAttributeTests
     [Trait("Category", "Unit")]
     public void AResultThatIsNotAQueryable_IsLeftAlone()
     {
+        // Arrange
         var productId = Guid.NewGuid();
         var result = new ObjectResult(new CatalogProduct { Id = productId });
         var context = ResultExecuting(result);
 
+        // Act
         new MaterializeODataListAttribute().OnResultExecuting(context);
 
+        // Assert
         var unchanged = Assert.IsType<CatalogProduct>(result.Value);
         Assert.Equal(productId, unchanged.Id);
     }
@@ -60,10 +69,13 @@ public class MaterializeODataListAttributeTests
     [Trait("Category", "Unit")]
     public void ANonObjectResult_IsLeftAlone()
     {
+        // Arrange
         var context = ResultExecuting(new UnauthorizedResult());
 
+        // Act
         new MaterializeODataListAttribute().OnResultExecuting(context);
 
+        // Assert
         Assert.IsType<UnauthorizedResult>(context.Result);
     }
 

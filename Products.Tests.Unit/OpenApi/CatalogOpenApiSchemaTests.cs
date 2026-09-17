@@ -22,8 +22,10 @@ public class CatalogOpenApiSchemaTests
     [Trait("Category", "Unit")]
     public async Task CatalogProductSchema_DeclaresNoOwnerId_SoThePublicDocumentNeverPromisesIt()
     {
+        // Act
         var properties = await CatalogProductPropertiesAsync();
 
+        // Assert
         Assert.False(properties.ContainsKey(JsonPropertyName(nameof(InventoryItem.OwnerId))));
     }
 
@@ -31,8 +33,10 @@ public class CatalogOpenApiSchemaTests
     [Trait("Category", "Unit")]
     public async Task CatalogProductSchema_DeclaresNoOwnerPrivateFields()
     {
+        // Act
         var properties = await CatalogProductPropertiesAsync();
 
+        // Assert
         Assert.False(properties.ContainsKey(JsonPropertyName(nameof(InventoryItem.SerialNumber))));
         Assert.False(properties.ContainsKey(JsonPropertyName(nameof(InventoryItem.PurchaseDate))));
         Assert.False(properties.ContainsKey(JsonPropertyName(nameof(InventoryItem.PricePaid))));
@@ -43,8 +47,10 @@ public class CatalogOpenApiSchemaTests
     [Trait("Category", "Unit")]
     public async Task CatalogProductSchema_StillDeclaresTheUniversalFields_SoTheAbsenceChecksAreNotVacuous()
     {
+        // Act
         var properties = await CatalogProductPropertiesAsync();
 
+        // Assert
         Assert.True(properties.ContainsKey(JsonPropertyName(nameof(CatalogProduct.Name))));
         Assert.True(properties.ContainsKey(JsonPropertyName(nameof(CatalogProduct.Brand))));
         Assert.True(properties.ContainsKey(JsonPropertyName(nameof(CatalogProduct.ModelNumber))));
@@ -55,11 +61,14 @@ public class CatalogOpenApiSchemaTests
     [Trait("Category", "Unit")]
     public async Task CatalogListOperation_IsAnonymous_WhileTheInventoryListOperationIsNot()
     {
+        // Arrange
         var document = await TransformedDocumentAsync();
 
+        // Act
         var catalogGet = OperationFor(document, ODataQueryParameterTransformer.CatalogProductsPath);
         var inventoryGet = OperationFor(document, ODataQueryParameterTransformer.InventoryItemsPath);
 
+        // Assert
         Assert.NotNull(catalogGet.Security);
         Assert.Empty(catalogGet.Security);
         Assert.Null(inventoryGet.Security);

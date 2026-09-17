@@ -36,10 +36,13 @@ public class InventoryControllerTests
     [Trait("Category", "Unit")]
     public async Task GetMyInventory_ReturnsUnauthorized_WhenThereIsNoSubClaim()
     {
+        // Arrange
         _controller.ControllerContext = MakeControllerContext(userId: null);
 
+        // Act
         var result = await _controller.GetMyInventory(search: null, TestContext.Current.CancellationToken);
 
+        // Assert
         Assert.IsType<UnauthorizedResult>(result.Result);
     }
 
@@ -47,6 +50,7 @@ public class InventoryControllerTests
     [Trait("Category", "Unit")]
     public async Task GetMyInventory_MergesTheCatalogFactsOntoTheOwnersItem()
     {
+        // Arrange
         var ownerId = Guid.NewGuid();
         var catalogProduct = MakeCatalogProduct();
         var item = MakeItem(ownerId, catalogProduct.Id);
@@ -54,8 +58,10 @@ public class InventoryControllerTests
         SetupItemsReturn([item]);
         SetupCatalogReturns([catalogProduct]);
 
+        // Act
         var result = await _controller.GetMyInventory(search: null, TestContext.Current.CancellationToken);
 
+        // Assert
         var views = Assert.IsType<IReadOnlyList<InventoryItemView>>(GetValue(result), exactMatch: false);
         var view = Assert.Single(views);
         Assert.Equal(catalogProduct.Name, view.Name);
@@ -69,6 +75,7 @@ public class InventoryControllerTests
     [Trait("Category", "Unit")]
     public async Task GetMyInventory_StillReturnsTheItem_WhenItsCatalogProductIsMissing()
     {
+        // Arrange
         var ownerId = Guid.NewGuid();
         var missingCatalogProductId = Guid.NewGuid();
         var item = MakeItem(ownerId, missingCatalogProductId);
@@ -76,8 +83,10 @@ public class InventoryControllerTests
         SetupItemsReturn([item]);
         SetupCatalogReturns([]);
 
+        // Act
         var result = await _controller.GetMyInventory(search: null, TestContext.Current.CancellationToken);
 
+        // Assert
         var views = Assert.IsType<IReadOnlyList<InventoryItemView>>(GetValue(result), exactMatch: false);
         var view = Assert.Single(views);
         Assert.Equal(item.Id, view.Id);
@@ -88,6 +97,7 @@ public class InventoryControllerTests
     [Trait("Category", "Unit")]
     public async Task GetMyInventory_FiltersByNameCaseInsensitively()
     {
+        // Arrange
         var ownerId = Guid.NewGuid();
         var wanted = MakeCatalogProduct();
         var other = MakeCatalogProduct();
@@ -97,10 +107,12 @@ public class InventoryControllerTests
         SetupItemsReturn([wantedItem, otherItem]);
         SetupCatalogReturns([wanted, other]);
 
+        // Act
         var result = await _controller.GetMyInventory(
             wanted.Name?.ToUpperInvariant(),
             TestContext.Current.CancellationToken);
 
+        // Assert
         var views = Assert.IsType<IReadOnlyList<InventoryItemView>>(GetValue(result), exactMatch: false);
         var view = Assert.Single(views);
         Assert.Equal(wantedItem.Id, view.Id);
@@ -110,6 +122,7 @@ public class InventoryControllerTests
     [Trait("Category", "Unit")]
     public async Task GetMyInventory_OrdersByNameOrdinally_SoUppercaseSortsBeforeLowercase()
     {
+        // Arrange
         var ownerId = Guid.NewGuid();
         var uppercaseFirst = MakeCatalogProduct();
         uppercaseFirst.Name = TestValues.NewUppercaseSortingName();
@@ -121,8 +134,10 @@ public class InventoryControllerTests
         SetupItemsReturn([lowercaseItem, uppercaseItem]);
         SetupCatalogReturns([lowercaseFirst, uppercaseFirst]);
 
+        // Act
         var result = await _controller.GetMyInventory(search: null, TestContext.Current.CancellationToken);
 
+        // Assert
         var views = Assert.IsType<IReadOnlyList<InventoryItemView>>(GetValue(result), exactMatch: false);
         Assert.Equal([uppercaseItem.Id, lowercaseItem.Id], views.Select(v => v.Id));
     }
@@ -131,12 +146,15 @@ public class InventoryControllerTests
     [Trait("Category", "Unit")]
     public async Task AddToInventory_ReturnsUnauthorized_WhenThereIsNoSubClaim()
     {
+        // Arrange
         _controller.ControllerContext = MakeControllerContext(userId: null);
 
+        // Act
         var result = await _controller.AddToInventory(
             MakeRequest(),
             TestContext.Current.CancellationToken);
 
+        // Assert
         Assert.IsType<UnauthorizedResult>(result);
     }
 
@@ -144,6 +162,7 @@ public class InventoryControllerTests
     [Trait("Category", "Unit")]
     public async Task AddToInventory_ReturnsTheMergedView_SoTheClientNeedsNoSecondRequest()
     {
+        // Arrange
         var ownerId = Guid.NewGuid();
         var catalogProduct = MakeCatalogProduct();
         var request = MakeRequest();
@@ -151,8 +170,10 @@ public class InventoryControllerTests
         SetupFindOrCreateReturns(catalogProduct);
         SetupInsertSucceeds();
 
+        // Act
         var result = await _controller.AddToInventory(request, TestContext.Current.CancellationToken);
 
+        // Assert
         var view = Assert.IsType<InventoryItemView>(Assert.IsType<CreatedResult>(result).Value);
         Assert.Equal(catalogProduct.Id, view.CatalogProductId);
         Assert.Equal(catalogProduct.Name, view.Name);
@@ -165,13 +186,16 @@ public class InventoryControllerTests
     [Trait("Category", "Unit")]
     public async Task AddToInventory_SetsOwnerIdFromTheClaim_AndNeverFromTheRequest()
     {
+        // Arrange
         var ownerId = Guid.NewGuid();
         _controller.ControllerContext = MakeControllerContext(ownerId);
         SetupFindOrCreateReturns(MakeCatalogProduct());
         var inserted = SetupInsertSucceeds();
 
+        // Act
         await _controller.AddToInventory(MakeRequest(), TestContext.Current.CancellationToken);
 
+        // Assert
         Assert.Equal(ownerId, Assert.Single(inserted).OwnerId);
     }
 

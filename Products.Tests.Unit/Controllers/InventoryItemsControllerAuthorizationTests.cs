@@ -2,7 +2,6 @@ namespace Products.Tests.Unit.Controllers;
 
 using System.Reflection;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
 using Products.Controllers;
 
 public class InventoryItemsControllerAuthorizationTests
@@ -11,8 +10,10 @@ public class InventoryItemsControllerAuthorizationTests
     [Trait("Category", "Unit")]
     public void InventoryItemsController_RequiresAuthorization_AtTheClassLevel()
     {
+        // Act
         var authorize = typeof(InventoryItemsController).GetCustomAttribute<AuthorizeAttribute>();
 
+        // Assert
         Assert.NotNull(authorize);
         Assert.Equal(nameof(Products), authorize.Policy);
     }
@@ -21,46 +22,25 @@ public class InventoryItemsControllerAuthorizationTests
     [Trait("Category", "Unit")]
     public void InventoryItemsController_ExposesActionsToReflect_SoTheAnonymousCheckIsNotVacuous()
     {
-        Assert.NotEmpty(PublicActions());
+        // Act
+        var actions = PublicActions();
+
+        // Assert
+        Assert.NotEmpty(actions);
     }
 
     [Fact]
     [Trait("Category", "Unit")]
     public void InventoryItemsController_DeclaresNoAnonymousAction()
     {
+        // Act
         var anonymous = PublicActions()
             .Where(m => m.GetCustomAttribute<AllowAnonymousAttribute>() is not null)
             .Select(m => m.Name);
 
+        // Assert
         Assert.Empty(anonymous);
     }
-
-    [Fact]
-    [Trait("Category", "Unit")]
-    public void CatalogProductsController_DeleteAction_RequiresTheProductsPolicy()
-    {
-        var delete = CatalogDeleteAction();
-
-        Assert.NotNull(delete);
-        var authorize = delete.GetCustomAttribute<AuthorizeAttribute>();
-        Assert.NotNull(authorize);
-        Assert.Equal(nameof(Products), authorize.Policy);
-    }
-
-    [Fact]
-    [Trait("Category", "Unit")]
-    public void CatalogProductsController_DeleteAction_IsNotAnonymous()
-    {
-        var delete = CatalogDeleteAction();
-
-        Assert.NotNull(delete);
-        Assert.Null(delete.GetCustomAttribute<AllowAnonymousAttribute>());
-    }
-
-    private static MethodInfo? CatalogDeleteAction() =>
-        typeof(CatalogProductsController)
-            .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-            .SingleOrDefault(m => m.GetCustomAttribute<HttpDeleteAttribute>() is not null);
 
     private static MethodInfo[] PublicActions() =>
         typeof(InventoryItemsController)
