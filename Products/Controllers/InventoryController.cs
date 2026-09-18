@@ -40,12 +40,12 @@ public class InventoryController : ControllerBase
             cancellationToken: cancellationToken);
         var items = await itemCursor.ToListAsync(cancellationToken);
 
-        var catalogProductIds = items.Select(i => i.CatalogProductId).Distinct().ToList();
+        var catalogProductIds = items.Select(i => i.CatalogProductId).Distinct(EqualityComparer<Guid>.Default).ToList();
         var catalogCursor = await _catalogProducts.FindAsync(
             Builders<CatalogProduct>.Filter.In(c => c.Id, catalogProductIds),
             cancellationToken: cancellationToken);
         var catalogProducts = await catalogCursor.ToListAsync(cancellationToken);
-        var catalogProductsById = catalogProducts.ToDictionary(c => c.Id);
+        var catalogProductsById = catalogProducts.ToDictionary(c => c.Id, EqualityComparer<Guid>.Default);
 
         var views = items
             .Select(i => Merge(i, catalogProductsById.GetValueOrDefault(i.CatalogProductId)))

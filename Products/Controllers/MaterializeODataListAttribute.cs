@@ -4,6 +4,7 @@ using System.Collections;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 
+[AttributeUsage(AttributeTargets.Method)]
 public sealed class MaterializeODataListAttribute : ResultFilterAttribute
 {
     public override void OnResultExecuting(ResultExecutingContext context)
