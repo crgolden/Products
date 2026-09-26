@@ -9,7 +9,7 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using Products.HostedServices;
 
-public sealed class ProductsWebApplicationFactory : WebApplicationFactory<Program>
+public sealed class ProductsWebApplicationFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     internal static readonly string TestScheme = Guid.NewGuid().ToString();
 
@@ -21,6 +21,11 @@ public sealed class ProductsWebApplicationFactory : WebApplicationFactory<Progra
     private bool _hostCreated;
 
     public string? RefusedDatabase { get; private set; }
+
+    public async ValueTask InitializeAsync()
+    {
+        await DeleteEveryDocumentInTheTestDatabaseAsync();
+    }
 
     public override async ValueTask DisposeAsync()
     {

@@ -39,7 +39,7 @@ dotnet build Products.Tests.Integration --configuration Debug
 .\Products.Tests.Integration\bin\Debug\net10.0\Products.Tests.Integration.exe -trait "Category=Integration" -showLiveOutput
 ```
 
-> **Data isolation:** integration tests write to the configured `MongoDatabaseName` database using `OwnerId` = `ProductsWebApplicationFactory.TestUserId`, which is generated per run (`Guid.NewGuid()`), and delete the item ids they recorded in `IAsyncDisposable.DisposeAsync` — not every document in the database. **Concurrent runs against the same database are still not supported**: inventory rows are owner-scoped, but the catalog rows `AddToInventory` find-or-creates are not, and that path is a `MatchKey` upsert, so two runs contend on the same catalog documents regardless of owner.
+> **Data isolation:** integration tests write to the configured `MongoDatabaseName` database using `OwnerId` = `ProductsWebApplicationFactory.TestUserId`, which is generated per run (`Guid.NewGuid()`); the factory empties `InventoryItems` and `CatalogProducts` before the first test and after the last (below). **Concurrent runs against the same database are still not supported**: inventory rows are owner-scoped, but the catalog rows `AddToInventory` find-or-creates are not, and that path is a `MatchKey` upsert, so two runs contend on the same catalog documents regardless of owner.
 
 ---
 
@@ -94,7 +94,7 @@ Tests the `Product` POCO — default values, nullability, equality semantics —
 |------|-----------------|
 | `Get_FiltersProductsByOwner_WhenAuthenticatedWithGuidSub` | `POST /odata/Products` then `GET /odata/Products?$orderby=Name` round-trip succeeds against real MongoDB. Covers the wiring the unit tier cannot reach — that `Program.cs` actually calls the registration, that the OData model and the collection agree, and that the driver talks to a real server. **The `BsonClassMap` Guid serialization regression itself is now caught in the unit tier** (`Models/ProductTests.cs`), proven by removing the serializers and watching four unit tests fail; this test is no longer the only thing standing between that defect and production. |
 
-At the end of the run `ProductsWebApplicationFactory.DisposeAsync` deletes every document in `InventoryItems` and `CatalogProducts`, after checking that the database it is connected to ends in `Test`; no test cleans up after itself. They target a `*Test` database, never the `crgolden` database the app serves: locally the local MongoDB's (a local run never reaches production), in CI the server's `crgoldenTest`. The factory's start-up refusal enforces the name.
+`ProductsWebApplicationFactory` deletes every document in `InventoryItems` and `CatalogProducts` twice, in `InitializeAsync` before the first test and in `DisposeAsync` after the last, each time after checking that the database it is connected to ends in `Test`; no test cleans up after itself. The start-of-run sweep is the one a crashed or killed run relies on: its `DisposeAsync` never ran, and without the sweep its documents would reach every later run. They target a `*Test` database, never the `crgolden` database the app serves: locally the local MongoDB's (a local run never reaches production), in CI the server's `crgoldenTest`. The factory's start-up refusal enforces the name.
 
 ---
 
