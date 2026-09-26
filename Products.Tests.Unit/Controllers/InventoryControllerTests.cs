@@ -10,8 +10,8 @@ using Products.Authorization;
 using Products.Controllers;
 using Products.HostedServices;
 using Products.Models;
-using Products.Tests.Unit.TestSupport;
 
+[Trait("Category", "Unit")]
 public class InventoryControllerTests
 {
     private readonly Mock<IMongoCollection<InventoryItem>> _mockItems;
@@ -33,7 +33,6 @@ public class InventoryControllerTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public async Task GetMyInventory_ReturnsUnauthorized_WhenThereIsNoSubClaim()
     {
         // Arrange
@@ -47,7 +46,6 @@ public class InventoryControllerTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public async Task GetMyInventory_MergesTheCatalogFactsOntoTheOwnersItem()
     {
         // Arrange
@@ -72,7 +70,6 @@ public class InventoryControllerTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public async Task GetMyInventory_StillReturnsTheItem_WhenItsCatalogProductIsMissing()
     {
         // Arrange
@@ -94,7 +91,6 @@ public class InventoryControllerTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public async Task GetMyInventory_FiltersByNameCaseInsensitively()
     {
         // Arrange
@@ -119,15 +115,14 @@ public class InventoryControllerTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public async Task GetMyInventory_OrdersByNameOrdinally_SoUppercaseSortsBeforeLowercase()
     {
         // Arrange
         var ownerId = Guid.NewGuid();
         var uppercaseFirst = MakeCatalogProduct();
-        uppercaseFirst.Name = TestValues.NewUppercaseSortingName();
+        uppercaseFirst.Name = Generated.NewUppercaseSortingName();
         var lowercaseFirst = MakeCatalogProduct();
-        lowercaseFirst.Name = TestValues.NewLowercaseSortingName();
+        lowercaseFirst.Name = Generated.NewLowercaseSortingName();
         var uppercaseItem = MakeItem(ownerId, uppercaseFirst.Id);
         var lowercaseItem = MakeItem(ownerId, lowercaseFirst.Id);
         _controller.ControllerContext = MakeControllerContext(ownerId);
@@ -143,7 +138,6 @@ public class InventoryControllerTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public async Task AddToInventory_ReturnsUnauthorized_WhenThereIsNoSubClaim()
     {
         // Arrange
@@ -159,7 +153,6 @@ public class InventoryControllerTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public async Task AddToInventory_ReturnsTheMergedView_SoTheClientNeedsNoSecondRequest()
     {
         // Arrange
@@ -183,7 +176,6 @@ public class InventoryControllerTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public async Task AddToInventory_SetsOwnerIdFromTheClaim_AndNeverFromTheRequest()
     {
         // Arrange
@@ -201,12 +193,12 @@ public class InventoryControllerTests
 
     private static AddToInventoryRequest MakeRequest() => new()
     {
-        Name = TestValues.NewProductName(),
-        Brand = TestValues.NewBrand(),
-        ModelNumber = TestValues.NewModelNumber(),
-        MsrpPrice = TestValues.NewPrice(),
-        SerialNumber = TestValues.NewModelNumber(),
-        PricePaid = TestValues.NewPrice(),
+        Name = Generated.NewProductName(),
+        Brand = Generated.NewBrand(),
+        ModelNumber = Generated.NewModelNumber(),
+        MsrpPrice = Generated.NewPrice(),
+        SerialNumber = Generated.NewModelNumber(),
+        PricePaid = Generated.NewPrice(),
     };
 
     private static object? GetValue(ActionResult<IReadOnlyList<InventoryItemView>> result) =>
@@ -218,10 +210,10 @@ public class InventoryControllerTests
         return new CatalogProduct
         {
             Id = catalogProductId,
-            Name = TestValues.NewProductName(),
-            Brand = TestValues.NewBrand(),
-            ModelNumber = TestValues.NewModelNumber(),
-            MsrpPrice = TestValues.NewPrice(),
+            Name = Generated.NewProductName(),
+            Brand = Generated.NewBrand(),
+            ModelNumber = Generated.NewModelNumber(),
+            MsrpPrice = Generated.NewPrice(),
             CreatedAt = DateTimeOffset.UtcNow,
         };
     }
@@ -234,8 +226,8 @@ public class InventoryControllerTests
             Id = itemId,
             OwnerId = ownerId,
             CatalogProductId = catalogProductId,
-            SerialNumber = TestValues.NewModelNumber(),
-            PricePaid = TestValues.NewPrice(),
+            SerialNumber = Generated.NewModelNumber(),
+            PricePaid = Generated.NewPrice(),
             CreatedAt = DateTimeOffset.UtcNow,
         };
     }

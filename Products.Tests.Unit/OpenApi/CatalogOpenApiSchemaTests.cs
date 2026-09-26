@@ -7,19 +7,18 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi;
 using Products.Models;
 using Products.OpenApi;
-using TestSupport;
 
+[Trait("Category", "Unit")]
 public class CatalogOpenApiSchemaTests
 {
     private static readonly OpenApiDocumentTransformerContext Context = new()
     {
-        DocumentName = TestValues.NewOpenApiDocumentName(),
+        DocumentName = Generated.NewOpenApiDocumentName(),
         DescriptionGroups = [],
         ApplicationServices = new ServiceCollection().BuildServiceProvider(),
     };
 
     [Fact]
-    [Trait("Category", "Unit")]
     public async Task CatalogProductSchema_DeclaresNoOwnerId_SoThePublicDocumentNeverPromisesIt()
     {
         // Act
@@ -30,7 +29,6 @@ public class CatalogOpenApiSchemaTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public async Task CatalogProductSchema_DeclaresNoOwnerPrivateFields()
     {
         // Act
@@ -44,7 +42,6 @@ public class CatalogOpenApiSchemaTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public async Task CatalogProductSchema_StillDeclaresTheUniversalFields_SoTheAbsenceChecksAreNotVacuous()
     {
         // Act
@@ -58,7 +55,6 @@ public class CatalogOpenApiSchemaTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public async Task CatalogListOperation_IsAnonymous_WhileTheInventoryListOperationIsNot()
     {
         // Arrange

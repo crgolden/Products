@@ -1,16 +1,15 @@
 namespace Products.Tests.Unit.Models;
 
 using Products.Models;
-using Products.Tests.Unit.TestSupport;
 
+[Trait("Category", "Unit")]
 public class CatalogProductMatchKeyTests
 {
     [Fact]
-    [Trait("Category", "Unit")]
     public void Compute_ReturnsNull_WhenBrandIsMissing()
     {
         // Arrange
-        var modelNumber = TestValues.NewModelNumber();
+        var modelNumber = Generated.NewModelNumber();
 
         // Act
         var matchKey = CatalogProductMatchKey.Compute(null, modelNumber);
@@ -20,11 +19,10 @@ public class CatalogProductMatchKeyTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void Compute_ReturnsNull_WhenModelNumberIsMissing()
     {
         // Arrange
-        var brand = TestValues.NewBrand();
+        var brand = Generated.NewBrand();
 
         // Act
         var matchKey = CatalogProductMatchKey.Compute(brand, null);
@@ -34,29 +32,27 @@ public class CatalogProductMatchKeyTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void Compute_ReturnsNull_WhenBrandIsWhitespace()
     {
         // Arrange
-        var modelNumber = TestValues.NewModelNumber();
+        var modelNumber = Generated.NewModelNumber();
 
         // Act
-        var matchKey = CatalogProductMatchKey.Compute(TestValues.NewBlank(), modelNumber);
+        var matchKey = CatalogProductMatchKey.Compute(Generated.NewBlank(), modelNumber);
 
         // Assert
         Assert.Null(matchKey);
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void Compute_IgnoresSurroundingWhitespace_SoATypedSpaceDoesNotFragmentTheCatalog()
     {
         // Arrange
-        var brand = TestValues.NewBrand();
-        var modelNumber = TestValues.NewModelNumber();
+        var brand = Generated.NewBrand();
+        var modelNumber = Generated.NewModelNumber();
 
-        var paddedBrand = string.Concat(TestValues.NewBlank(), brand, TestValues.NewBlank());
-        var paddedModelNumber = string.Concat(TestValues.NewBlank(), modelNumber, TestValues.NewBlank());
+        var paddedBrand = string.Concat(Generated.NewBlank(), brand, Generated.NewBlank());
+        var paddedModelNumber = string.Concat(Generated.NewBlank(), modelNumber, Generated.NewBlank());
         var bare = CatalogProductMatchKey.Compute(brand, modelNumber);
 
         // Act
@@ -67,12 +63,11 @@ public class CatalogProductMatchKeyTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void Compute_IgnoresCase_SoTheSameProductTypedDifferentlyStillMatches()
     {
         // Arrange
-        var brand = TestValues.NewBrand();
-        var modelNumber = TestValues.NewModelNumber();
+        var brand = Generated.NewBrand();
+        var modelNumber = Generated.NewModelNumber();
 
         var upper = CatalogProductMatchKey.Compute(brand.ToUpperInvariant(), modelNumber.ToUpperInvariant());
 
@@ -84,16 +79,15 @@ public class CatalogProductMatchKeyTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void Compute_DistinguishesDifferentModelNumbersOfTheSameBrand()
     {
         // Arrange
-        var brand = TestValues.NewBrand();
+        var brand = Generated.NewBrand();
 
-        var first = CatalogProductMatchKey.Compute(brand, TestValues.NewModelNumber());
+        var first = CatalogProductMatchKey.Compute(brand, Generated.NewModelNumber());
 
         // Act
-        var second = CatalogProductMatchKey.Compute(brand, TestValues.NewModelNumber());
+        var second = CatalogProductMatchKey.Compute(brand, Generated.NewModelNumber());
 
         // Assert
         Assert.NotEqual(first, second);

@@ -1,12 +1,10 @@
 namespace Products.Tests.Unit.OpenApi;
 
 using System.Net.Http;
-using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi;
 using Products.OpenApi;
-using TestSupport;
 
 [Trait("Category", "Unit")]
 public sealed class ODataQueryParameterTransformerTests
@@ -15,7 +13,7 @@ public sealed class ODataQueryParameterTransformerTests
 
     private static readonly OpenApiDocumentTransformerContext Context = new()
     {
-        DocumentName = TestValues.NewOpenApiDocumentName(),
+        DocumentName = Generated.NewOpenApiDocumentName(),
         DescriptionGroups = [],
         ApplicationServices = new ServiceCollection().BuildServiceProvider(),
     };
@@ -36,9 +34,9 @@ public sealed class ODataQueryParameterTransformerTests
         // Assert
         Assert.True(document.Components?.SecuritySchemes?.ContainsKey(ODataQueryParameterTransformer.BearerSecuritySchemeName));
         Assert.Equal(SingleSecurityRequirement, document.Security?.Count);
-        Assert.True(document.Paths?.ContainsKey(ODataQueryParameterTransformer.CatalogProductsPath));
-        Assert.True(document.Paths?.ContainsKey(ODataQueryParameterTransformer.InventoryItemsPath));
-        Assert.True(document.Paths?.ContainsKey(ODataQueryParameterTransformer.AddToInventoryPath));
+        Assert.True(document.Paths.ContainsKey(ODataQueryParameterTransformer.CatalogProductsPath));
+        Assert.True(document.Paths.ContainsKey(ODataQueryParameterTransformer.InventoryItemsPath));
+        Assert.True(document.Paths.ContainsKey(ODataQueryParameterTransformer.AddToInventoryPath));
     }
 
     [Fact]
@@ -52,7 +50,6 @@ public sealed class ODataQueryParameterTransformerTests
         await transformer.TransformAsync(document, Context, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(document.Paths);
         Assert.DoesNotContain(
             document.Paths.Keys,
             p => p.StartsWith(ODataQueryParameterTransformer.RetiredProductsPath, StringComparison.Ordinal));
@@ -69,7 +66,7 @@ public sealed class ODataQueryParameterTransformerTests
         await transformer.TransformAsync(document, Context, CancellationToken.None);
 
         // Assert
-        var parameters = document.Paths?[ODataQueryParameterTransformer.CatalogProductsPath]?.Operations?[HttpMethod.Get]?.Parameters;
+        var parameters = document.Paths[ODataQueryParameterTransformer.CatalogProductsPath].Operations?[HttpMethod.Get].Parameters;
         Assert.NotNull(parameters);
         Assert.Equal(ODataQueryParameterTransformer.ListQueryOptions.Length, parameters.Count);
     }
@@ -86,7 +83,7 @@ public sealed class ODataQueryParameterTransformerTests
         await transformer.TransformAsync(document, Context, CancellationToken.None);
 
         // Assert
-        var parameters = document.Paths?[ODataQueryParameterTransformer.CatalogProductsPath]?.Operations?[HttpMethod.Get]?.Parameters;
+        var parameters = document.Paths[ODataQueryParameterTransformer.CatalogProductsPath].Operations?[HttpMethod.Get].Parameters;
         Assert.NotNull(parameters);
         Assert.Contains(parameters, p => string.Equals(p.Name, queryOption, StringComparison.Ordinal));
     }
@@ -112,7 +109,7 @@ public sealed class ODataQueryParameterTransformerTests
         await transformer.TransformAsync(document, Context, CancellationToken.None);
 
         // Assert
-        var get = document.Paths?[ODataQueryParameterTransformer.CatalogProductsPath]?.Operations?[HttpMethod.Get];
+        var get = document.Paths[ODataQueryParameterTransformer.CatalogProductsPath].Operations?[HttpMethod.Get];
         Assert.NotNull(get);
         Assert.NotNull(get.Security);
         Assert.Empty(get.Security);
@@ -129,7 +126,7 @@ public sealed class ODataQueryParameterTransformerTests
         await transformer.TransformAsync(document, Context, CancellationToken.None);
 
         // Assert
-        var get = document.Paths?[ODataQueryParameterTransformer.InventoryItemsPath]?.Operations?[HttpMethod.Get];
+        var get = document.Paths[ODataQueryParameterTransformer.InventoryItemsPath].Operations?[HttpMethod.Get];
         Assert.NotNull(get);
         Assert.Null(get.Security);
     }
@@ -147,7 +144,7 @@ public sealed class ODataQueryParameterTransformerTests
         await transformer.TransformAsync(document, Context, CancellationToken.None);
 
         // Assert
-        var operations = document.Paths?[path]?.Operations;
+        var operations = document.Paths[path].Operations;
         Assert.NotNull(operations);
         Assert.All(operations.Values, o => Assert.Null(o.Security));
     }

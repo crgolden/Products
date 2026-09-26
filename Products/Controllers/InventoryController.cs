@@ -1,12 +1,12 @@
 namespace Products.Controllers;
 
 using System.Security.Claims;
-using Authorization;
-using HostedServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Models;
 using MongoDB.Driver;
+using Products.Authorization;
+using Products.HostedServices;
+using Products.Models;
 
 [ApiController]
 [Route("inventory")]
@@ -23,14 +23,14 @@ public class InventoryController : ControllerBase
     }
 
     private Guid? CurrentUserId =>
-        User.FindFirstValue(ProductClaims.Subject) is string s && Guid.TryParse(s, out var g) ? g : null;
+        User.FindFirstValue(ProductClaims.Subject) is { } s && Guid.TryParse(s, out var g) ? g : null;
 
     [HttpGet("items")]
     public async Task<ActionResult<IReadOnlyList<InventoryItemView>>> GetMyInventory(
         [FromQuery] string? search,
         CancellationToken cancellationToken)
     {
-        if (CurrentUserId is not Guid ownerId)
+        if (CurrentUserId is not { } ownerId)
         {
             return Unauthorized();
         }
@@ -61,7 +61,7 @@ public class InventoryController : ControllerBase
         [FromBody] AddToInventoryRequest request,
         CancellationToken cancellationToken)
     {
-        if (CurrentUserId is not Guid ownerId)
+        if (CurrentUserId is not { } ownerId)
         {
             return Unauthorized();
         }
@@ -144,7 +144,7 @@ public class InventoryController : ControllerBase
             .SetOnInsert(c => c.MsrpPrice, candidate.MsrpPrice)
             .SetOnInsert(c => c.MatchKey, matchKey);
 
-        return await _catalogProducts.FindOneAndUpdateAsync<CatalogProduct>(
+        return await _catalogProducts.FindOneAndUpdateAsync(
             c => c.MatchKey == matchKey,
             update,
             new FindOneAndUpdateOptions<CatalogProduct>

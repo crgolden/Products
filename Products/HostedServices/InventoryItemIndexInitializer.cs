@@ -1,7 +1,7 @@
 namespace Products.HostedServices;
 
-using Models;
 using MongoDB.Driver;
+using Products.Models;
 
 public sealed class InventoryItemIndexInitializer : BackgroundService
 {
@@ -10,11 +10,13 @@ public sealed class InventoryItemIndexInitializer : BackgroundService
     private static readonly TimeSpan DefaultRetryDelay = TimeSpan.FromSeconds(30);
 
     private readonly IMongoDatabase _database;
+    private readonly Telemetry _telemetry;
     private readonly TimeSpan _retryDelay;
 
-    public InventoryItemIndexInitializer(IMongoDatabase database, TimeSpan? retryDelay = null)
+    public InventoryItemIndexInitializer(IMongoDatabase database, Telemetry telemetry, TimeSpan? retryDelay = null)
     {
         _database = database;
+        _telemetry = telemetry;
         _retryDelay = retryDelay ?? DefaultRetryDelay;
     }
 
@@ -37,7 +39,7 @@ public sealed class InventoryItemIndexInitializer : BackgroundService
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                Telemetry.Metrics.IndexCreationFailed(ex);
+                _telemetry.IndexCreationFailed(ex);
             }
 
             await Task.Delay(_retryDelay, stoppingToken);

@@ -4,10 +4,10 @@ using System.Reflection;
 using Microsoft.AspNetCore.Authorization;
 using Products.Controllers;
 
+[Trait("Category", "Unit")]
 public class InventoryItemsControllerAuthorizationTests
 {
     [Fact]
-    [Trait("Category", "Unit")]
     public void InventoryItemsController_RequiresAuthorization_AtTheClassLevel()
     {
         // Act
@@ -19,7 +19,6 @@ public class InventoryItemsControllerAuthorizationTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void InventoryItemsController_ExposesActionsToReflect_SoTheAnonymousCheckIsNotVacuous()
     {
         // Act
@@ -30,7 +29,6 @@ public class InventoryItemsControllerAuthorizationTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void InventoryItemsController_DeclaresNoAnonymousAction()
     {
         // Act

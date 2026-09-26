@@ -2,16 +2,15 @@ namespace Products.Tests.Unit.Models;
 
 using System.Text.Json;
 using Products.Models;
-using Products.Tests.Unit.TestSupport;
 
+[Trait("Category", "Unit")]
 public class AddToInventoryRequestTests
 {
     [Fact]
-    [Trait("Category", "Unit")]
     public void ManualUrl_DeserializesFromAJsonString_SoTheRequestContractIsUnchanged()
     {
         // Arrange
-        var manualUrl = TestValues.NewManualUrl();
+        var manualUrl = Generated.NewManualUrl();
         var json = JsonSerializer.Serialize(
             new { manualUrl = manualUrl.AbsoluteUri },
             JsonSerializerOptions.Web);
@@ -25,11 +24,10 @@ public class AddToInventoryRequestTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void ManualUrl_SerializesBackToTheSameJsonString()
     {
         // Arrange
-        var manualUrl = TestValues.NewManualUrl();
+        var manualUrl = Generated.NewManualUrl();
         var request = new AddToInventoryRequest { ManualUrl = manualUrl };
         var json = JsonSerializer.Serialize(request, JsonSerializerOptions.Web);
 
@@ -42,12 +40,11 @@ public class AddToInventoryRequestTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void ManualUrl_IsNullWhenTheJsonOmitsIt()
     {
         // Arrange
         var json = JsonSerializer.Serialize(
-            new { name = TestValues.NewProductName() },
+            new { name = Generated.NewProductName() },
             JsonSerializerOptions.Web);
 
         // Act

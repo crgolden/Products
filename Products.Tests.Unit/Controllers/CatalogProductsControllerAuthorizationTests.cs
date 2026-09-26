@@ -5,10 +5,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Products.Controllers;
 
+[Trait("Category", "Unit")]
 public class CatalogProductsControllerAuthorizationTests
 {
     [Fact]
-    [Trait("Category", "Unit")]
     public void CatalogProductsController_DeleteAction_RequiresTheProductsPolicy()
     {
         // Act
@@ -22,7 +22,6 @@ public class CatalogProductsControllerAuthorizationTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void CatalogProductsController_DeleteAction_IsNotAnonymous()
     {
         // Act

@@ -1,17 +1,17 @@
 namespace Products.Controllers;
 
 using System.Security.Claims;
-using Authorization;
-using HostedServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Deltas;
 using Microsoft.AspNetCore.OData.Query;
 using Microsoft.AspNetCore.OData.Results;
 using Microsoft.AspNetCore.OData.Routing.Controllers;
-using Models;
 using MongoDB.AspNetCore.OData;
 using MongoDB.Driver;
+using Products.Authorization;
+using Products.HostedServices;
+using Products.Models;
 
 [Authorize(Policy = nameof(Products))]
 public class InventoryItemsController : ODataController
@@ -24,14 +24,14 @@ public class InventoryItemsController : ODataController
     }
 
     private Guid? CurrentUserId =>
-        User.FindFirstValue(ProductClaims.Subject) is string s && Guid.TryParse(s, out var g) ? g : null;
+        User.FindFirstValue(ProductClaims.Subject) is { } s && Guid.TryParse(s, out var g) ? g : null;
 
     [HttpGet]
     [MongoEnableQuery(HandleNullPropagation = HandleNullPropagationOption.False)]
     [MaterializeODataList]
     public ActionResult<IQueryable<InventoryItem>> Get(ODataQueryOptions<InventoryItem> queryOptions)
     {
-        if (CurrentUserId is not Guid ownerId)
+        if (CurrentUserId is not { } ownerId)
         {
             return Unauthorized();
         }
@@ -47,7 +47,7 @@ public class InventoryItemsController : ODataController
         [FromRoute] Guid key,
         CancellationToken cancellationToken)
     {
-        if (CurrentUserId is not Guid ownerId)
+        if (CurrentUserId is not { } ownerId)
         {
             return Unauthorized();
         }
@@ -69,7 +69,7 @@ public class InventoryItemsController : ODataController
             return BadRequest(ModelState);
         }
 
-        if (CurrentUserId is not Guid ownerId)
+        if (CurrentUserId is not { } ownerId)
         {
             return Unauthorized();
         }
@@ -92,7 +92,7 @@ public class InventoryItemsController : ODataController
             return BadRequest(ModelState);
         }
 
-        if (CurrentUserId is not Guid ownerId)
+        if (CurrentUserId is not { } ownerId)
         {
             return Unauthorized();
         }
@@ -110,6 +110,7 @@ public class InventoryItemsController : ODataController
         var catalogProductId = existing.CatalogProductId;
         delta.Patch(existing);
 
+        existing.Id = key;
         existing.OwnerId = ownerId;
         existing.CreatedAt = createdAt;
         existing.CatalogProductId = catalogProductId;
@@ -123,7 +124,7 @@ public class InventoryItemsController : ODataController
         [FromRoute] Guid key,
         CancellationToken cancellationToken)
     {
-        if (CurrentUserId is not Guid ownerId)
+        if (CurrentUserId is not { } ownerId)
         {
             return Unauthorized();
         }

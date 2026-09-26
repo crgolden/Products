@@ -13,8 +13,8 @@ using Moq;
 using Products.Controllers;
 using Products.HostedServices;
 using Products.Models;
-using Products.Tests.Unit.TestSupport;
 
+[Trait("Category", "Unit")]
 public class CatalogProductsControllerTests
 {
     private readonly Mock<IMongoCollection<CatalogProduct>> _mockCollection;
@@ -36,7 +36,6 @@ public class CatalogProductsControllerTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public async Task GetByKey_ReturnsEmptySingleResult_WhenTheCatalogProductDoesNotExist()
     {
         // Arrange
@@ -51,16 +50,15 @@ public class CatalogProductsControllerTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public async Task Post_ComputesTheMatchKey_SoTheUniqueIndexCanDeduplicate()
     {
         // Arrange
-        var brand = TestValues.NewBrand();
-        var modelNumber = TestValues.NewModelNumber();
+        var brand = Generated.NewBrand();
+        var modelNumber = Generated.NewModelNumber();
         SetupInsertSucceeds();
         var input = new CatalogProduct
         {
-            Name = TestValues.NewProductName(),
+            Name = Generated.NewProductName(),
             Brand = brand,
             ModelNumber = modelNumber,
         };
@@ -74,15 +72,14 @@ public class CatalogProductsControllerTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public async Task Post_LeavesTheMatchKeyNull_WhenTheBrandIsMissing()
     {
         // Arrange
         SetupInsertSucceeds();
         var input = new CatalogProduct
         {
-            Name = TestValues.NewProductName(),
-            ModelNumber = TestValues.NewModelNumber(),
+            Name = Generated.NewProductName(),
+            ModelNumber = Generated.NewModelNumber(),
         };
 
         // Act
@@ -93,13 +90,12 @@ public class CatalogProductsControllerTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public async Task Post_NeverTrustsAClientSuppliedMatchKey()
     {
         // Arrange
-        var brand = TestValues.NewBrand();
-        var modelNumber = TestValues.NewModelNumber();
-        var spoofedMatchKey = TestValues.NewModelNumber();
+        var brand = Generated.NewBrand();
+        var modelNumber = Generated.NewModelNumber();
+        var spoofedMatchKey = Generated.NewModelNumber();
         SetupInsertSucceeds();
         var input = new CatalogProduct
         {
@@ -117,7 +113,6 @@ public class CatalogProductsControllerTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public async Task Patch_ReturnsNotFound_WhenTheCatalogProductDoesNotExist()
     {
         // Arrange
@@ -135,7 +130,6 @@ public class CatalogProductsControllerTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public async Task Patch_DoesNotTurnAnUnrelatedWriteErrorIntoAConflict()
     {
         // Arrange
@@ -143,9 +137,9 @@ public class CatalogProductsControllerTests
         var existing = new CatalogProduct
         {
             Id = catalogProductId,
-            Name = TestValues.NewProductName(),
-            Brand = TestValues.NewBrand(),
-            ModelNumber = TestValues.NewModelNumber(),
+            Name = Generated.NewProductName(),
+            Brand = Generated.NewBrand(),
+            ModelNumber = Generated.NewModelNumber(),
         };
         SetupFindReturns([existing]);
         _mockCollection
@@ -167,7 +161,6 @@ public class CatalogProductsControllerTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public async Task Post_DoesNotTurnAnUnrelatedWriteErrorIntoAConflict()
     {
         // Arrange
@@ -179,9 +172,9 @@ public class CatalogProductsControllerTests
             .ThrowsAsync(WriteExceptionWithoutADuplicateKey());
         var input = new CatalogProduct
         {
-            Name = TestValues.NewProductName(),
-            Brand = TestValues.NewBrand(),
-            ModelNumber = TestValues.NewModelNumber(),
+            Name = Generated.NewProductName(),
+            Brand = Generated.NewBrand(),
+            ModelNumber = Generated.NewModelNumber(),
         };
 
         // Act
@@ -193,7 +186,6 @@ public class CatalogProductsControllerTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public async Task Delete_ReturnsConflict_WhenAnInventoryItemStillReferencesTheCatalogProduct()
     {
         // Arrange
@@ -214,7 +206,6 @@ public class CatalogProductsControllerTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public async Task Delete_ReturnsNotFound_WhenNoCatalogProductMatched()
     {
         // Arrange
@@ -230,7 +221,6 @@ public class CatalogProductsControllerTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public async Task Delete_ReturnsNoContent_WhenTheCatalogProductWasDeleted()
     {
         // Arrange
@@ -239,9 +229,9 @@ public class CatalogProductsControllerTests
         SetupFindOneAndDeleteReturns(new CatalogProduct
         {
             Id = catalogProductId,
-            Name = TestValues.NewProductName(),
-            Brand = TestValues.NewBrand(),
-            ModelNumber = TestValues.NewModelNumber(),
+            Name = Generated.NewProductName(),
+            Brand = Generated.NewBrand(),
+            ModelNumber = Generated.NewModelNumber(),
         });
 
         // Act
@@ -296,9 +286,9 @@ public class CatalogProductsControllerTests
         _mockCollection
             .Setup(c => c.FindOneAndDeleteAsync(
                 It.IsAny<FilterDefinition<CatalogProduct>>(),
-                It.IsAny<FindOneAndDeleteOptions<CatalogProduct, CatalogProduct>>(),
+                It.IsAny<FindOneAndDeleteOptions<CatalogProduct, CatalogProduct?>>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(default(CatalogProduct));
+            .ReturnsAsync((CatalogProduct?)null);
 
     private void SetupFindReturns(IList<CatalogProduct> catalogProducts)
     {

@@ -1,16 +1,15 @@
 namespace Products.Controllers;
 
-using Authorization;
-using HostedServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Deltas;
 using Microsoft.AspNetCore.OData.Query;
 using Microsoft.AspNetCore.OData.Results;
 using Microsoft.AspNetCore.OData.Routing.Controllers;
-using Models;
 using MongoDB.AspNetCore.OData;
 using MongoDB.Driver;
+using Products.HostedServices;
+using Products.Models;
 
 public class CatalogProductsController : ODataController
 {
@@ -91,6 +90,7 @@ public class CatalogProductsController : ODataController
         var createdAt = existing.CreatedAt;
         delta.Patch(existing);
 
+        existing.Id = key;
         existing.CreatedAt = createdAt;
         existing.UpdatedAt = DateTimeOffset.UtcNow;
         existing.MatchKey = CatalogProductMatchKey.Compute(existing.Brand, existing.ModelNumber);

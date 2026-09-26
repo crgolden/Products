@@ -4,22 +4,22 @@ using System.Net;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.OData;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.OData.ModelBuilder;
+using Products.OpenApi;
+using Products.Tests.Unit.TestSupport;
 
 [Trait("Category", "Unit")]
 public sealed class MaterializeODataListPipelineTests : IAsyncLifetime
 {
-    private const string RoutePrefix = "odata";
+    private static readonly string RoutePrefix = Generated.NewRoutePrefix();
 
-    private const string ContextPropertyName = "@odata.context";
-
-    private const string DetailEntitySetName = "PipelineRowDetails";
+    private static readonly string DetailEntitySetName = Generated.NewEntitySetName();
 
     private WebApplication? _app;
 
@@ -33,6 +33,8 @@ public sealed class MaterializeODataListPipelineTests : IAsyncLifetime
         builder.Services.AddControllers().AddOData(options =>
         {
             var modelBuilder = new ODataConventionModelBuilder();
+            modelBuilder.EntitySet<PipelineRow>(FailingMaterializedRowsController.EntitySetName);
+            modelBuilder.EntitySet<PipelineRow>(FailingStreamedRowsController.EntitySetName);
             modelBuilder.EntitySet<PipelineRow>(MaterializedRowsController.EntitySetName);
             modelBuilder.EntitySet<PipelineRow>(StreamedRowsController.EntitySetName);
             modelBuilder.EntitySet<PipelineRowDetail>(DetailEntitySetName);
@@ -45,10 +47,14 @@ public sealed class MaterializeODataListPipelineTests : IAsyncLifetime
         });
 
         _app = builder.Build();
-        _app.UseExceptionHandler(errors => errors.Run(context =>
+        _app.UseExceptionHandler(errors => errors.Run(async context =>
         {
             context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-            return Task.CompletedTask;
+            var failure = context.Features.Get<IExceptionHandlerFeature>();
+            if (failure is not null)
+            {
+                await context.Response.WriteAsync(failure.Error.ToString(), context.RequestAborted);
+            }
         }));
         _app.MapControllers();
         await _app.StartAsync(TestContext.Current.CancellationToken);
@@ -68,10 +74,10 @@ public sealed class MaterializeODataListPipelineTests : IAsyncLifetime
     public async Task AProviderFailureMidEnumeration_ReachesTheClientAsAFailure_NotATruncated200()
     {
         // Arrange
-        var url = ListUrl(MaterializedRowsController.EntitySetName);
+        var url = ListUrl(FailingMaterializedRowsController.EntitySetName);
 
         // Act
-        var response = await Client().GetAsync(url, TestContext.Current.CancellationToken);
+        var response = await GetWithoutBufferingTheBodyAsync(url);
 
         // Assert
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
@@ -81,10 +87,10 @@ public sealed class MaterializeODataListPipelineTests : IAsyncLifetime
     public async Task WithoutMaterialization_TheSameFailure_IsA200WhoseBodyNeverCloses()
     {
         // Arrange
-        var url = ListUrl(StreamedRowsController.EntitySetName);
+        var url = ListUrl(FailingStreamedRowsController.EntitySetName);
 
         // Act
-        var response = await Client().GetAsync(url, TestContext.Current.CancellationToken);
+        var response = await GetWithoutBufferingTheBodyAsync(url);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -97,7 +103,7 @@ public sealed class MaterializeODataListPipelineTests : IAsyncLifetime
     public async Task ASelectedPayload_IsIdenticalWhetherOrNotTheListWasMaterialized()
     {
         // Arrange
-        var query = $"$select={nameof(PipelineRow.Name)}&$top={PipelineRows.RowsBeforeTheFailure}";
+        var query = $"{ODataQueryParameterTransformer.SelectQueryOption}={nameof(PipelineRow.Name)}";
 
         // Act
         var materialized = await BodyWithoutContextAsync(ListUrl(MaterializedRowsController.EntitySetName, query));
@@ -105,13 +111,14 @@ public sealed class MaterializeODataListPipelineTests : IAsyncLifetime
 
         // Assert
         Assert.Equal(streamed, materialized);
+        Assert.All(PipelineRows.Rows, row => Assert.Contains(row.Name, materialized, StringComparison.Ordinal));
     }
 
     [Fact]
     public async Task AnExpandedPayload_IsIdenticalWhetherOrNotTheListWasMaterialized()
     {
         // Arrange
-        var query = $"$expand={nameof(PipelineRow.Detail)}&$top={PipelineRows.RowsBeforeTheFailure}";
+        var query = $"{ODataQueryParameterTransformer.ExpandQueryOption}={nameof(PipelineRow.Detail)}";
 
         // Act
         var materialized = await BodyWithoutContextAsync(ListUrl(MaterializedRowsController.EntitySetName, query));
@@ -119,7 +126,9 @@ public sealed class MaterializeODataListPipelineTests : IAsyncLifetime
 
         // Assert
         Assert.Equal(streamed, materialized);
-        Assert.Contains(nameof(PipelineRow.Detail), materialized, StringComparison.Ordinal);
+        Assert.All(PipelineRows.Rows, row => Assert.Contains(row.Id.ToString(), materialized, StringComparison.Ordinal));
+        Assert.All(PipelineRows.Rows, row => Assert.Contains(row.Detail.Id.ToString(), materialized, StringComparison.Ordinal));
+        Assert.All(PipelineRows.Rows, row => Assert.Contains(row.Detail.Label, materialized, StringComparison.Ordinal));
     }
 
     private static string ListUrl(string entitySetName, string? query = null) =>
@@ -141,13 +150,16 @@ public sealed class MaterializeODataListPipelineTests : IAsyncLifetime
 
     private HttpClient Client() => _client ?? throw new InvalidOperationException("The test host has not started.");
 
+    private Task<HttpResponseMessage> GetWithoutBufferingTheBodyAsync(string url) =>
+        Client().GetAsync(url, HttpCompletionOption.ResponseHeadersRead, TestContext.Current.CancellationToken);
+
     private async Task<string> BodyWithoutContextAsync(string url)
     {
-        var response = await Client().GetAsync(url, TestContext.Current.CancellationToken);
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var response = await GetWithoutBufferingTheBodyAsync(url);
         var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        Assert.True(response.StatusCode == HttpStatusCode.OK, $"{url} answered {(int)response.StatusCode}: {body}");
         var node = JsonNode.Parse(body) ?? throw new InvalidOperationException("The list body was not JSON.");
-        node.AsObject().Remove(ContextPropertyName);
+        node.AsObject().Remove(ODataProtocolConstants.ContextAnnotation);
         return node.ToJsonString();
     }
 }

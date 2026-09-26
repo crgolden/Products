@@ -10,10 +10,10 @@ using Microsoft.AspNetCore.Routing;
 using Products.Controllers;
 using Products.Models;
 
+[Trait("Category", "Unit")]
 public class MaterializeODataListAttributeTests
 {
     [Fact]
-    [Trait("Category", "Unit")]
     public void AProviderFailure_SurfacesBeforeTheResponseStarts_RatherThanTruncatingA200()
     {
         // Arrange
@@ -30,7 +30,6 @@ public class MaterializeODataListAttributeTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void AListResult_IsReplacedByAMaterialisedListOfTheSameElementType()
     {
         // Arrange
@@ -49,7 +48,6 @@ public class MaterializeODataListAttributeTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void AResultThatIsNotAQueryable_IsLeftAlone()
     {
         // Arrange
@@ -66,7 +64,6 @@ public class MaterializeODataListAttributeTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void ANonObjectResult_IsLeftAlone()
     {
         // Arrange

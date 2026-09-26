@@ -5,11 +5,11 @@ using Microsoft.AspNetCore.OData.Routing.Controllers;
 using Products.Controllers;
 using Products.Tests.Unit.TestSupport;
 
-public sealed class MaterializedRowsController : ODataController
+public sealed class FailingMaterializedRowsController : ODataController
 {
-    internal static readonly string EntitySetName = ConventionalEntitySets.For<MaterializedRowsController>();
+    internal static readonly string EntitySetName = ConventionalEntitySets.For<FailingMaterializedRowsController>();
 
     [EnableQuery]
     [MaterializeODataList]
-    public IQueryable<PipelineRow> Get() => PipelineRows.AllRows();
+    public IQueryable<PipelineRow> Get() => PipelineRows.FailingAfterTheRows();
 }

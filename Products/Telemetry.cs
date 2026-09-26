@@ -2,10 +2,24 @@ namespace Products;
 
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
+using Microsoft.Extensions.Options;
 
-public static class Telemetry
+public sealed class Telemetry
 {
-    public static readonly ActivitySource ActivitySource = new(nameof(Products), "1.0.0");
+    private readonly Counter<long> _indexCreationFailureCounter;
+
+    public Telemetry(IMeterFactory meterFactory, IOptions<TelemetryOptions> telemetryOptions)
+    {
+        var meter = meterFactory.Create(Metrics.MeterName, typeof(Telemetry).Assembly.GetName().Version?.ToString());
+        _indexCreationFailureCounter = meter.CreateCounter<long>(
+            Metrics.IndexCreationFailureCounterName,
+            description: telemetryOptions.Value.IndexCreationFailureDescription);
+    }
+
+    public void IndexCreationFailed(Exception exception) =>
+        _indexCreationFailureCounter.Add(
+            1,
+            new TagList { { Metrics.ExceptionTypeTagName, exception.GetType().FullName } });
 
     public static class Metrics
     {
@@ -14,17 +28,5 @@ public static class Telemetry
         public const string IndexCreationFailureCounterName = "products.index_creation.failures";
 
         public const string ExceptionTypeTagName = "exception.type";
-
-        private static readonly Meter Meter = new(MeterName, "1.0.0");
-
-        private static readonly Counter<long> IndexCreationFailureCounter =
-            Meter.CreateCounter<long>(
-                IndexCreationFailureCounterName,
-                description: "Failed attempts to create the Product collection's indexes at startup, before the initializer retries.");
-
-        public static void IndexCreationFailed(Exception exception) =>
-            IndexCreationFailureCounter.Add(
-                1,
-                new TagList { { ExceptionTypeTagName, exception.GetType().FullName } });
     }
 }

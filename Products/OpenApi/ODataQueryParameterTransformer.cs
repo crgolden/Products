@@ -110,8 +110,6 @@ public class ODataQueryParameterTransformer : IOpenApiDocumentTransformer
 
     private static void EnsurePaths(OpenApiDocument document)
     {
-        document.Paths ??= new OpenApiPaths();
-
         if (!document.Paths.ContainsKey(CatalogProductsPath))
         {
             document.Paths[CatalogProductsPath] = BuildCatalogListPath();

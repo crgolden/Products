@@ -14,8 +14,8 @@ using Products.Authorization;
 using Products.Controllers;
 using Products.HostedServices;
 using Products.Models;
-using Products.Tests.Unit.TestSupport;
 
+[Trait("Category", "Unit")]
 public class InventoryItemsControllerTests
 {
     private readonly Mock<IMongoCollection<InventoryItem>> _mockCollection;
@@ -32,7 +32,6 @@ public class InventoryItemsControllerTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void Get_ReturnsUnauthorized_WhenThereIsNoSubClaim()
     {
         // Arrange
@@ -46,11 +45,10 @@ public class InventoryItemsControllerTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void Get_ReturnsUnauthorized_WhenTheSubClaimIsNotAGuid()
     {
         // Arrange
-        _controller.ControllerContext = MakeControllerContextWithSubject(TestValues.NewMalformedGuid());
+        _controller.ControllerContext = MakeControllerContextWithSubject(Generated.NewMalformedGuid());
 
         // Act
         var result = _controller.Get(EmptyQueryOptions());
@@ -60,7 +58,6 @@ public class InventoryItemsControllerTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public async Task GetByKey_ReturnsUnauthorized_WhenThereIsNoSubClaim()
     {
         // Arrange
@@ -75,7 +72,6 @@ public class InventoryItemsControllerTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public async Task Post_SetsOwnerIdFromTheClaim_AndNeverTrustsTheBody()
     {
         // Arrange
@@ -88,7 +84,7 @@ public class InventoryItemsControllerTests
         {
             OwnerId = spoofedOwnerId,
             CatalogProductId = catalogProductId,
-            SerialNumber = TestValues.NewModelNumber(),
+            SerialNumber = Generated.NewModelNumber(),
         };
 
         // Act
@@ -101,7 +97,6 @@ public class InventoryItemsControllerTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public async Task Post_ReturnsUnauthorized_WhenThereIsNoSubClaim()
     {
         // Arrange
@@ -117,7 +112,6 @@ public class InventoryItemsControllerTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public async Task Patch_ReturnsNotFound_WhenTheItemBelongsToAnotherOwner()
     {
         // Arrange
@@ -137,7 +131,6 @@ public class InventoryItemsControllerTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public async Task Delete_ReturnsNotFound_WhenNothingMatchedTheOwnerScopedFilter()
     {
         // Arrange
@@ -155,7 +148,6 @@ public class InventoryItemsControllerTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public async Task Delete_ReturnsNoContent_WhenTheOwnerScopedFilterMatched()
     {
         // Arrange

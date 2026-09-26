@@ -1,6 +1,6 @@
 # Testing
 
-The Products test suite uses xUnit v3 and is split into two tiers: **unit tests** that run on every push with no external dependencies, and **integration tests** that exercise the real MongoDB instance.
+The Products test suite uses xUnit v3 and is split into two tiers: **unit tests** that run on every push with no external dependencies, and **integration tests** that exercise a real MongoDB: locally, the MongoDB Windows service installed on the dev box (`localhost:27017`), in a database whose name ends in `Test`.
 
 Unit test coding standards (MockBehavior.Strict, argument verification, SetupSequence, no control-flow in tests, etc.) are in the workspace-level [Unit Test Standards](../AGENTS/TESTING.md#unit-test-standards).
 
@@ -9,7 +9,7 @@ Unit test coding standards (MockBehavior.Strict, argument verification, SetupSeq
 | Tier | Trait | Project | Requires Azure? | Runs in CI |
 |------|-------|---------|-----------------|------------|
 | Unit | `Category=Unit` | `Products.Tests.Unit` | No | Every push/PR |
-| Integration | `Category=Integration` | `Products.Tests.Unit` | No — MongoDB credentials from User Secrets; no Azure credentials needed | Local only (not yet in CI) |
+| Integration | `Category=Integration` | `Products.Tests.Integration` | No: MongoDB credentials from User Secrets locally, repo variables and the `MONGO_DB_PASSWORD_TEST` secret in CI | Every push/PR except Dependabot, against the server's `crgoldenTest` |
 
 ---
 
@@ -28,14 +28,15 @@ dotnet build Products.Tests.Unit --configuration Debug
 .\Products.Tests.Unit\bin\Debug\net10.0\Products.Tests.Unit.exe -trait "Category=Unit" -showLiveOutput
 ```
 
-### Integration Tests (require live MongoDB)
+### Integration Tests (the local MongoDB service)
 
-Requires `ASPNETCORE_ENVIRONMENT=Development` and configured User Secrets (`MongoDbUsername`, `MongoDbPassword`, `MongoServerHost`, `MongoServerPort`, `MongoUseTls`, `MongoDatabaseName`). No `az login` needed — MongoDB credentials come from User Secrets in non-production; Azure credentials are only constructed inside `IsProduction()` in `Program.cs`.
+Runs against the MongoDB Windows service on the dev box (`Get-Service MongoDB`), host and port from `appsettings.Development.json`, credentials from User Secrets (`MongoDbUsername`, `MongoDbPassword`). **`MongoDatabaseName` must be overridden to a database ending in `Test`**: `ProductsWebApplicationFactory` refuses to start against any other name, and `appsettings.Development.json` names the development database `crgolden`. No `az login` needed: Azure credentials are only constructed inside `IsProduction()` in `Program.cs`.
 
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT = "Development"
-dotnet build Products.Tests.Unit --configuration Debug
-.\Products.Tests.Unit\bin\Debug\net10.0\Products.Tests.Unit.exe -trait "Category=Integration" -showLiveOutput
+$env:MongoDatabaseName = "crgoldenTest"
+dotnet build Products.Tests.Integration --configuration Debug
+.\Products.Tests.Integration\bin\Debug\net10.0\Products.Tests.Integration.exe -trait "Category=Integration" -showLiveOutput
 ```
 
 > **Data isolation:** integration tests write to the configured `MongoDatabaseName` database using `OwnerId` = `ProductsWebApplicationFactory.TestUserId`, which is generated per run (`Guid.NewGuid()`), and delete the item ids they recorded in `IAsyncDisposable.DisposeAsync` — not every document in the database. **Concurrent runs against the same database are still not supported**: inventory rows are owner-scoped, but the catalog rows `AddToInventory` find-or-creates are not, and that path is a `MatchKey` upsert, so two runs contend on the same catalog documents regardless of owner.
@@ -93,7 +94,7 @@ Tests the `Product` POCO — default values, nullability, equality semantics —
 |------|-----------------|
 | `Get_FiltersProductsByOwner_WhenAuthenticatedWithGuidSub` | `POST /odata/Products` then `GET /odata/Products?$orderby=Name` round-trip succeeds against real MongoDB. Covers the wiring the unit tier cannot reach — that `Program.cs` actually calls the registration, that the OData model and the collection agree, and that the driver talks to a real server. **The `BsonClassMap` Guid serialization regression itself is now caught in the unit tier** (`Models/ProductTests.cs`), proven by removing the serializers and watching four unit tests fail; this test is no longer the only thing standing between that defect and production. |
 
-The test creates products and deletes them in `DisposeAsync`. Integration tests target the same MongoDB database used in development; do not run against a production database.
+At the end of the run `ProductsWebApplicationFactory.DisposeAsync` deletes every document in `InventoryItems` and `CatalogProducts`, after checking that the database it is connected to ends in `Test`; no test cleans up after itself. They target a `*Test` database, never the `crgolden` database the app serves: locally the local MongoDB's (a local run never reaches production), in CI the server's `crgoldenTest`. The factory's start-up refusal enforces the name.
 
 ---
 
@@ -106,7 +107,7 @@ The GitHub Actions workflow (`.github/workflows/main_crgolden-products.yml`) run
 3. SonarCloud analysis
 4. Publish artifact → deploy to Azure App Service `crgolden-products`
 
-Integration tests are not yet wired into the CI workflow. They run on developer machines against the same MongoDB instance used for development.
+The integration tier runs in CI after the unit tier, against the server's `crgoldenTest` database as the `productsTest` user, which is scoped to that database and refused on `crgolden`. Its settings come from the repo variables `MONGO_SERVER_HOST`, `MONGO_SERVER_PORT`, `MONGO_USE_TLS`, `MONGO_DATABASE_NAME_TEST`, `MONGO_DB_USERNAME_TEST` and `OIDC_AUTHORITY` and the secret `MONGO_DB_PASSWORD_TEST`; runners reach port 27017 through the `GitHubActions-MongoDB` firewall rules. Locally the same tier runs against a `*Test` database on the dev box's MongoDB service.
 
 ---
 
@@ -114,7 +115,7 @@ Integration tests are not yet wired into the CI workflow. They run on developer 
 
 Generate coverage first, then run from `Products/`. Unit coverage is OpenCover (branch-bearing, via
 `coverlet.console` pinned in `dotnet-tools.json` — restore with `dotnet tool restore`; see the workspace
-`TESTING.md` for the command rationale). Products has no integration/E2E suite, so OpenCover is the only report.
+`TESTING.md` for the command rationale).
 
 ```powershell
 dotnet build Products.Tests.Unit --configuration Release
@@ -132,7 +133,7 @@ $env:SONAR_TOKEN = "<token>"
   "-Dsonar.projectKey=crgolden_Products" `
   "-Dsonar.organization=crgolden" `
   "-Dsonar.sources=Products" `
-  "-Dsonar.tests=Products.Tests.Unit" `
+  "-Dsonar.tests=Products.Tests.Unit,Products.Tests.Integration" `
   "-Dsonar.exclusions=**/bin/**,**/obj/**" `
   "-Dsonar.cs.opencover.reportsPaths=coverage.opencover.xml"
 ```

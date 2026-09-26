@@ -5,12 +5,11 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using Moq;
 using Products.HealthChecks;
-using TestSupport;
 
+[Trait("Category", "Unit")]
 public sealed class MongoDbHealthCheckTests
 {
     [Fact]
-    [Trait("Category", "Unit")]
     public async Task CheckHealthAsync_ReturnsHealthy_WhenPingSucceeds()
     {
         // Arrange
@@ -34,11 +33,10 @@ public sealed class MongoDbHealthCheckTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public async Task CheckHealthAsync_ReturnsUnhealthyWithLastException_WhenPingAlwaysFails()
     {
         // Arrange
-        var expected = new TimeoutException(TestValues.NewTimeoutMessage());
+        var expected = new TimeoutException(Generated.NewTimeoutMessage());
         var database = new Mock<IMongoDatabase>(MockBehavior.Strict);
         database
             .Setup(d => d.RunCommandAsync(
@@ -60,7 +58,6 @@ public sealed class MongoDbHealthCheckTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public async Task CheckHealthAsync_RetriesOnce_BeforeReportingUnhealthy()
     {
         // Arrange
@@ -70,7 +67,7 @@ public sealed class MongoDbHealthCheckTests
                 It.IsAny<Command<BsonDocument>>(),
                 It.IsAny<ReadPreference>(),
                 It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new TimeoutException(TestValues.NewTimeoutMessage()));
+            .ThrowsAsync(new TimeoutException(Generated.NewTimeoutMessage()));
         var healthCheck = new MongoDbHealthCheck(database.Object);
 
         // Act
@@ -88,7 +85,6 @@ public sealed class MongoDbHealthCheckTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public async Task CheckHealthAsync_ReturnsHealthy_WhenFirstAttemptFailsAndRetrySucceeds()
     {
         // Arrange
@@ -98,7 +94,7 @@ public sealed class MongoDbHealthCheckTests
                 It.IsAny<Command<BsonDocument>>(),
                 It.IsAny<ReadPreference>(),
                 It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new TimeoutException(TestValues.NewTimeoutMessage()))
+            .ThrowsAsync(new TimeoutException(Generated.NewTimeoutMessage()))
             .ReturnsAsync(new BsonDocument(MongoDbHealthCheck.CommandOkField, 1));
         var healthCheck = new MongoDbHealthCheck(database.Object);
 

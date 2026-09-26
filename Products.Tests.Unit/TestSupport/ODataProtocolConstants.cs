@@ -1,8 +1,10 @@
-namespace Products.Tests.Unit.Integration;
+namespace Products.Tests.Unit.TestSupport;
 
 internal static class ODataProtocolConstants
 {
     internal const string CountAnnotation = "@odata.count";
+
+    internal const string ContextAnnotation = "@odata.context";
 
     internal const string StartsWithFunction = "startswith";
 

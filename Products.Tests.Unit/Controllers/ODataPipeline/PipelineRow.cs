@@ -4,7 +4,7 @@ public sealed class PipelineRow
 {
     public Guid Id { get; set; }
 
-    public string? Name { get; set; }
+    public required string Name { get; set; }
 
-    public PipelineRowDetail? Detail { get; set; }
+    public required PipelineRowDetail Detail { get; set; }
 }

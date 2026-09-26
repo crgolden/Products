@@ -1,4 +1,4 @@
-namespace Products.Tests.Unit.Infrastructure;
+namespace Products.Tests.Integration.Infrastructure;
 
 [CollectionDefinition(Name)]
 public sealed class IntegrationCollection : ICollectionFixture<ProductsWebApplicationFactory>

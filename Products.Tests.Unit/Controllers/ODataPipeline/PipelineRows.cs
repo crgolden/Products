@@ -1,22 +1,31 @@
 namespace Products.Tests.Unit.Controllers.ODataPipeline;
 
-using Products.Tests.Unit.TestSupport;
-
 internal static class PipelineRows
 {
     internal static readonly int RowsBeforeTheFailure = Random.Shared.Next(1, 5);
 
     internal static readonly PipelineRow[] Rows = Enumerable
         .Range(0, RowsBeforeTheFailure)
-        .Select(_ => new PipelineRow
-        {
-            Id = Guid.NewGuid(),
-            Name = TestValues.NewProductName(),
-            Detail = new PipelineRowDetail { Id = Guid.NewGuid(), Label = TestValues.NewProductName() },
-        })
+        .Select(_ => RowWithDetail())
         .ToArray();
 
+    internal static IQueryable<PipelineRow> AllRows() => Rows.AsQueryable();
+
     internal static IQueryable<PipelineRow> FailingAfterTheRows() => YieldThenFail().AsQueryable();
+
+    private static PipelineRow RowWithDetail()
+    {
+        var rowId = Guid.NewGuid();
+        var rowName = Generated.NewProductName();
+        var detailId = Guid.NewGuid();
+        var detailLabel = Generated.NewProductName();
+        return new PipelineRow
+        {
+            Id = rowId,
+            Name = rowName,
+            Detail = new PipelineRowDetail { Id = detailId, Label = detailLabel },
+        };
+    }
 
     private static IEnumerable<PipelineRow> YieldThenFail()
     {

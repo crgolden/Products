@@ -1,4 +1,3 @@
-#pragma warning disable SA1200
 using System.Diagnostics;
 using System.Security.Claims;
 using Azure.Identity;
@@ -6,21 +5,20 @@ using Elastic.Ingest.Elasticsearch;
 using Elastic.Ingest.Elasticsearch.DataStreams;
 using Elastic.Serilog.Sinks;
 using Elastic.Transport;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.OData;
 using Microsoft.Extensions.Azure;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.OData.ModelBuilder;
-using MongoDB.Bson;
-using MongoDB.Bson.Serialization;
-using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
 using MongoDB.Driver.Core.Extensions.DiagnosticSources;
 using OpenTelemetry.Instrumentation.AspNetCore;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using Products;
 using Products.Authorization;
 using Products.Extensions;
 using Products.HealthChecks;
@@ -28,7 +26,6 @@ using Products.HostedServices;
 using Products.Models;
 using Products.OpenApi;
 using Serilog;
-#pragma warning restore SA1200
 
 Log.Logger = new LoggerConfiguration().WriteTo.Console().CreateBootstrapLogger();
 
@@ -36,7 +33,7 @@ try
 {
     var builder = WebApplication.CreateBuilder(args);
     var mongoClientSettings = new MongoClientSettings();
-    string mongoDatabaseName = builder.Configuration.GetRequired<string>("MongoDatabaseName"),
+    string mongoDatabaseName = builder.Configuration.GetRequired<string>(MongoSettingKeys.DatabaseName),
         mongoServerHost = builder.Configuration.GetRequired<string>("MongoServerHost");
     var mongoServerPort = builder.Configuration.GetRequired<int>("MongoServerPort");
     var mongoUseTls = builder.Configuration.GetRequired<bool>("MongoUseTls");
@@ -95,14 +92,13 @@ try
                 }))
             .WithMetrics(meterProviderBuilder => meterProviderBuilder
                 .AddMeter("Microsoft.AspNetCore.Hosting")
-                .AddMeter(nameof(Products))
+                .AddMeter(Telemetry.Metrics.MeterName)
                 .AddRuntimeInstrumentation()
                 .AddOtlpExporter(o => o.Endpoint = new Uri(builder.Configuration.GetRequired<string>("AlloyEndpoint"))))
             .WithTracing(tracerProviderBuilder => tracerProviderBuilder
                 .SetSampler(new AlwaysOnSampler())
                 .AddAspNetCoreInstrumentation()
                 .AddHttpClientInstrumentation()
-                .AddSource(nameof(Products))
                 .AddSource("MongoDB.Driver.Core.Extensions.DiagnosticSources")
                 .AddOtlpExporter(o => o.Endpoint = new Uri(builder.Configuration.GetRequired<string>("AlloyEndpoint"))))
             .Services
@@ -114,11 +110,6 @@ try
     }
     else
     {
-        if (builder.Environment.IsDevelopment())
-        {
-            builder.Configuration.AddUserSecrets("efff68f7-73ce-43f6-9083-6659719fc179");
-        }
-
         builder.Services
             .AddSerilog((serviceProvider, loggerConfiguration) => loggerConfiguration
                 .ReadFrom.Configuration(builder.Configuration)
@@ -143,6 +134,9 @@ try
     builder.Services.AddSingleton(mongoDatabase);
     CatalogProductClassMap.Register();
     InventoryItemClassMap.Register();
+    var telemetryOptions = builder.Configuration.GetRequiredSection(nameof(TelemetryOptions)).Get<TelemetryOptions>() ?? throw new InvalidOperationException($"Invalid '{nameof(TelemetryOptions)}' section.");
+    builder.Services.AddSingleton(Options.Create(telemetryOptions));
+    builder.Services.AddSingleton<Telemetry>();
     builder.Services.AddHostedService<CatalogProductIndexInitializer>();
     builder.Services.AddHostedService<InventoryItemIndexInitializer>();
     builder.Services.AddControllers().AddOData(oDataOptions =>
@@ -220,7 +214,7 @@ try
         }
 
         using (Serilog.Context.LogContext.PushProperty("UserId", ctx.User.FindFirstValue(ProductClaims.Subject)))
-        using (Serilog.Context.LogContext.PushProperty("UserEmail", ctx.User.FindFirstValue("email")))
+        using (Serilog.Context.LogContext.PushProperty("UserEmail", ctx.User.FindFirstValue(JwtRegisteredClaimNames.Email)))
         {
             return next(ctx);
         }

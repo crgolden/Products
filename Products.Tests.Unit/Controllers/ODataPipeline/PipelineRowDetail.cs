@@ -4,5 +4,5 @@ public sealed class PipelineRowDetail
 {
     public Guid Id { get; set; }
 
-    public string? Label { get; set; }
+    public required string Label { get; set; }
 }

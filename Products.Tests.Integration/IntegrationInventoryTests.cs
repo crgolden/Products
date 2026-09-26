@@ -1,21 +1,20 @@
-namespace Products.Tests.Unit.Integration;
+namespace Products.Tests.Integration;
 
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Products.Models;
 using Products.OpenApi;
-using Products.Tests.Unit.Infrastructure;
+using Products.Tests.Integration.Infrastructure;
 using Products.Tests.Unit.TestSupport;
 
 [Collection(IntegrationCollection.Name)]
 [Trait("Category", "Integration")]
-public sealed class IntegrationInventoryTests : IAsyncDisposable
+public sealed class IntegrationInventoryTests : IDisposable
 {
     private const int ZeroPageSize = 0;
 
     private readonly HttpClient _client;
-    private readonly List<Guid> _createdItemIds = [];
 
     public IntegrationInventoryTests(ProductsWebApplicationFactory factory)
     {
@@ -25,18 +24,14 @@ public sealed class IntegrationInventoryTests : IAsyncDisposable
     [Fact]
     public async Task AddToInventory_ThenGet_ReturnsTheItemMergedWithItsCatalogFacts()
     {
-        // Arrange
-        var name = TestValues.NewProductName();
-        var brand = TestValues.NewBrand();
-        var modelNumber = TestValues.NewModelNumber();
-        var serialNumber = TestValues.NewModelNumber();
+        var name = Generated.NewProductName();
+        var brand = Generated.NewBrand();
+        var modelNumber = Generated.NewModelNumber();
+        var serialNumber = Generated.NewModelNumber();
 
-        // Act
         var itemId = await AddToInventoryAsync(name, brand, modelNumber, serialNumber);
-        _createdItemIds.Add(itemId);
         var response = await _client.GetAsync(ODataQueryParameterTransformer.AddToInventoryPath, TestContext.Current.CancellationToken);
 
-        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var items = await response.Content.ReadFromJsonAsync<JsonElement>(
             TestContext.Current.CancellationToken);
@@ -49,19 +44,14 @@ public sealed class IntegrationInventoryTests : IAsyncDisposable
     [Fact]
     public async Task AddToInventory_Twice_WithTheSameBrandAndModel_ReusesOneCatalogProduct()
     {
-        // Arrange
-        var brand = TestValues.NewBrand();
-        var modelNumber = TestValues.NewModelNumber();
+        var brand = Generated.NewBrand();
+        var modelNumber = Generated.NewModelNumber();
 
-        // Act
         var firstId = await AddToInventoryAsync(
-            TestValues.NewProductName(), brand, modelNumber, TestValues.NewModelNumber());
-        _createdItemIds.Add(firstId);
+            Generated.NewProductName(), brand, modelNumber, Generated.NewModelNumber());
         var secondId = await AddToInventoryAsync(
-            TestValues.NewProductName(), brand, modelNumber, TestValues.NewModelNumber());
-        _createdItemIds.Add(secondId);
+            Generated.NewProductName(), brand, modelNumber, Generated.NewModelNumber());
 
-        // Assert
         var response = await _client.GetAsync(ODataQueryParameterTransformer.AddToInventoryPath, TestContext.Current.CancellationToken);
         var items = await response.Content.ReadFromJsonAsync<JsonElement>(
             TestContext.Current.CancellationToken);
@@ -75,50 +65,41 @@ public sealed class IntegrationInventoryTests : IAsyncDisposable
     [Fact]
     public async Task PatchingACatalogProductOntoAnotherRowsMatchKey_Returns409_NotA500()
     {
-        // Arrange
-        var takenBrand = TestValues.NewBrand();
-        var takenModelNumber = TestValues.NewModelNumber();
-        var takenItemId = await AddToInventoryAsync(
-            TestValues.NewProductName(), takenBrand, takenModelNumber, TestValues.NewModelNumber());
-        _createdItemIds.Add(takenItemId);
+        var takenBrand = Generated.NewBrand();
+        var takenModelNumber = Generated.NewModelNumber();
+        await AddToInventoryAsync(
+            Generated.NewProductName(), takenBrand, takenModelNumber, Generated.NewModelNumber());
 
         var movingItemId = await AddToInventoryAsync(
-            TestValues.NewProductName(),
-            TestValues.NewBrand(),
-            TestValues.NewModelNumber(),
-            TestValues.NewModelNumber());
-        _createdItemIds.Add(movingItemId);
+            Generated.NewProductName(),
+            Generated.NewBrand(),
+            Generated.NewModelNumber(),
+            Generated.NewModelNumber());
         var movingCatalogProductId = await GetCatalogProductIdAsync(movingItemId);
 
-        // Act
         var response = await _client.PatchAsJsonAsync(
             $"{ODataQueryParameterTransformer.CatalogProductsPath}({movingCatalogProductId})",
             new { brand = takenBrand, modelNumber = takenModelNumber },
             TestContext.Current.CancellationToken);
 
-        // Assert
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
 
     [Fact]
     public async Task TopZeroOnTheCatalog_ReturnsAnEmptyPageAndTheRealCount_NotA500()
     {
-        // Arrange
-        var itemId = await AddToInventoryAsync(
-            TestValues.NewProductName(),
-            TestValues.NewBrand(),
-            TestValues.NewModelNumber(),
-            TestValues.NewModelNumber());
-        _createdItemIds.Add(itemId);
+        await AddToInventoryAsync(
+            Generated.NewProductName(),
+            Generated.NewBrand(),
+            Generated.NewModelNumber(),
+            Generated.NewModelNumber());
 
-        // Act
         var response = await _client.GetAsync(
             $"{ODataQueryParameterTransformer.CatalogProductsPath}" +
                 $"?{ODataQueryParameterTransformer.CountQueryOption}={ODataProtocolConstants.TrueValue}" +
                 $"&{ODataQueryParameterTransformer.TopQueryOption}={ZeroPageSize}",
             TestContext.Current.CancellationToken);
 
-        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>(
             TestContext.Current.CancellationToken);
@@ -131,27 +112,24 @@ public sealed class IntegrationInventoryTests : IAsyncDisposable
     [InlineData(ODataProtocolConstants.ContainsFunction)]
     public async Task NegatingAStringFunction_FiltersTheRows_NotA500(string function)
     {
-        // Arrange
-        var uppercaseMarker = TestValues.NewUppercaseMarker();
-        var excludedModelNumber = string.Concat(uppercaseMarker, TestValues.NewModelNumber());
-        var lowercaseSurvivingModelNumber = TestValues.NewModelNumber();
-        _createdItemIds.Add(await AddToInventoryAsync(
-            TestValues.NewProductName(),
-            TestValues.NewBrand(),
+        var uppercaseMarker = Generated.NewUppercaseMarker();
+        var excludedModelNumber = string.Concat(uppercaseMarker, Generated.NewModelNumber());
+        var lowercaseSurvivingModelNumber = Generated.NewModelNumber();
+        await AddToInventoryAsync(
+            Generated.NewProductName(),
+            Generated.NewBrand(),
             excludedModelNumber,
-            TestValues.NewModelNumber()));
-        _createdItemIds.Add(await AddToInventoryAsync(
-            TestValues.NewProductName(),
-            TestValues.NewBrand(),
+            Generated.NewModelNumber());
+        await AddToInventoryAsync(
+            Generated.NewProductName(),
+            Generated.NewBrand(),
             lowercaseSurvivingModelNumber,
-            TestValues.NewModelNumber()));
+            Generated.NewModelNumber());
 
-        // Act
         var response = await _client.GetAsync(
             NegatedStringFunctionFilter(function, nameof(CatalogProduct.ModelNumber), uppercaseMarker),
             TestContext.Current.CancellationToken);
 
-        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         Assert.Contains(lowercaseSurvivingModelNumber, body, StringComparison.Ordinal);
@@ -161,22 +139,19 @@ public sealed class IntegrationInventoryTests : IAsyncDisposable
     [Fact]
     public async Task NegatingAStringFunction_KeepsRowsWhoseFieldIsNull()
     {
-        // Arrange
-        var uppercaseMarker = TestValues.NewUppercaseMarker();
-        var nameOfTheRowWithANullCategory = TestValues.NewProductName();
-        _createdItemIds.Add(await AddToInventoryAsync(
+        var uppercaseMarker = Generated.NewUppercaseMarker();
+        var nameOfTheRowWithANullCategory = Generated.NewProductName();
+        await AddToInventoryAsync(
             nameOfTheRowWithANullCategory,
-            TestValues.NewBrand(),
-            TestValues.NewModelNumber(),
-            TestValues.NewModelNumber()));
+            Generated.NewBrand(),
+            Generated.NewModelNumber(),
+            Generated.NewModelNumber());
 
-        // Act
         var response = await _client.GetAsync(
             NegatedStringFunctionFilter(
                 ODataProtocolConstants.StartsWithFunction, nameof(CatalogProduct.Category), uppercaseMarker),
             TestContext.Current.CancellationToken);
 
-        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         Assert.Contains(nameOfTheRowWithANullCategory, body, StringComparison.Ordinal);
@@ -185,39 +160,25 @@ public sealed class IntegrationInventoryTests : IAsyncDisposable
     [Fact]
     public async Task RetiredProductsCollection_IsNotRouted()
     {
-        // Act
         var response = await _client.GetAsync(
             ODataQueryParameterTransformer.RetiredProductsPath, TestContext.Current.CancellationToken);
 
-        // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
     public async Task RetiredProductsKeyedRoute_IsNotRouted()
     {
-        // Arrange
         var retiredProductId = Guid.NewGuid();
 
-        // Act
         var response = await _client.GetAsync(
             $"{ODataQueryParameterTransformer.RetiredProductsPath}({retiredProductId})",
             TestContext.Current.CancellationToken);
 
-        // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        foreach (var id in _createdItemIds)
-        {
-            await _client.DeleteAsync(
-                $"{ODataQueryParameterTransformer.InventoryItemsPath}({id})", CancellationToken.None);
-        }
-
-        _client.Dispose();
-    }
+    public void Dispose() => _client.Dispose();
 
     private static string JsonPropertyName(string memberName) =>
         JsonNamingPolicy.CamelCase.ConvertName(memberName);

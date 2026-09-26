@@ -1,14 +1,13 @@
 namespace Products.Tests.Unit.Models;
 
-using Microsoft.AspNetCore.OData.Query;
 using Microsoft.OData.Edm;
 using Microsoft.OData.ModelBuilder;
 using Products.Models;
 
+[Trait("Category", "Unit")]
 public class CatalogProductTests
 {
     [Fact]
-    [Trait("Category", "Unit")]
     public void CatalogProduct_HasNoOwnerIdProperty_SoTheAnonymousSurfaceCannotLeakOwnership()
     {
         // Act
@@ -19,7 +18,6 @@ public class CatalogProductTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void CatalogProduct_DeclaresNoOwnerIdOnTheEdm_SoItCannotBeSelected()
     {
         // Arrange
@@ -33,7 +31,6 @@ public class CatalogProductTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void CatalogProduct_MatchKey_IsNotDeclaredOnTheEdm_SoAClientCannotSelectOrPatchIt()
     {
         // Arrange
@@ -47,7 +44,6 @@ public class CatalogProductTests
     }
 
     [Fact]
-    [Trait("Category", "Unit")]
     public void CatalogProduct_ManualUrl_IsDeclaredAsAnEdmString_SoAClientCanSendAUrl()
     {
         // Arrange
