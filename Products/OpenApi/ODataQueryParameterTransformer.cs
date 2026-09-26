@@ -38,6 +38,14 @@ public class ODataQueryParameterTransformer : IOpenApiDocumentTransformer
 
     internal const string CollectionValueProperty = "value";
 
+    internal const string UuidFormat = "uuid";
+
+    internal const string DateTimeFormat = "date-time";
+
+    internal const string DecimalFormat = "decimal";
+
+    internal const string UriFormat = "uri";
+
     internal static readonly string[] ListQueryOptions =
     [
         FilterQueryOption,
@@ -197,15 +205,15 @@ public class ODataQueryParameterTransformer : IOpenApiDocumentTransformer
             Type = JsonSchemaType.Object,
             Properties = new Dictionary<string, IOpenApiSchema>
             {
-                ["id"] = new OpenApiSchema { Type = JsonSchemaType.String, Format = "uuid" },
+                ["id"] = new OpenApiSchema { Type = JsonSchemaType.String, Format = UuidFormat },
                 ["name"] = new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null },
                 ["brand"] = new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null },
                 ["modelNumber"] = new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null },
                 ["category"] = new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null },
                 ["manualUrl"] = new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null },
-                ["msrpPrice"] = new OpenApiSchema { Type = JsonSchemaType.Number | JsonSchemaType.Null, Format = "decimal" },
-                ["createdAt"] = new OpenApiSchema { Type = JsonSchemaType.String, Format = "date-time" },
-                ["updatedAt"] = new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null, Format = "date-time" },
+                ["msrpPrice"] = new OpenApiSchema { Type = JsonSchemaType.Number | JsonSchemaType.Null, Format = DecimalFormat },
+                ["createdAt"] = new OpenApiSchema { Type = JsonSchemaType.String, Format = DateTimeFormat },
+                ["updatedAt"] = new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null, Format = DateTimeFormat },
             },
         };
     }
@@ -217,15 +225,15 @@ public class ODataQueryParameterTransformer : IOpenApiDocumentTransformer
             Type = JsonSchemaType.Object,
             Properties = new Dictionary<string, IOpenApiSchema>
             {
-                ["id"] = new OpenApiSchema { Type = JsonSchemaType.String, Format = "uuid" },
-                ["ownerId"] = new OpenApiSchema { Type = JsonSchemaType.String, Format = "uuid", ReadOnly = true },
-                ["catalogProductId"] = new OpenApiSchema { Type = JsonSchemaType.String, Format = "uuid" },
+                ["id"] = new OpenApiSchema { Type = JsonSchemaType.String, Format = UuidFormat },
+                ["ownerId"] = new OpenApiSchema { Type = JsonSchemaType.String, Format = UuidFormat, ReadOnly = true },
+                ["catalogProductId"] = new OpenApiSchema { Type = JsonSchemaType.String, Format = UuidFormat },
                 ["serialNumber"] = new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null },
-                ["purchaseDate"] = new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null, Format = "date-time" },
-                ["pricePaid"] = new OpenApiSchema { Type = JsonSchemaType.Number | JsonSchemaType.Null, Format = "decimal" },
+                ["purchaseDate"] = new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null, Format = DateTimeFormat },
+                ["pricePaid"] = new OpenApiSchema { Type = JsonSchemaType.Number | JsonSchemaType.Null, Format = DecimalFormat },
                 ["description"] = new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null },
-                ["createdAt"] = new OpenApiSchema { Type = JsonSchemaType.String, Format = "date-time" },
-                ["updatedAt"] = new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null, Format = "date-time" },
+                ["createdAt"] = new OpenApiSchema { Type = JsonSchemaType.String, Format = DateTimeFormat },
+                ["updatedAt"] = new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null, Format = DateTimeFormat },
             },
         };
     }
@@ -241,11 +249,11 @@ public class ODataQueryParameterTransformer : IOpenApiDocumentTransformer
                 ["brand"] = new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null },
                 ["modelNumber"] = new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null },
                 ["category"] = new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null },
-                ["manualUrl"] = new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null, Format = "uri" },
-                ["msrpPrice"] = new OpenApiSchema { Type = JsonSchemaType.Number | JsonSchemaType.Null, Format = "decimal" },
+                ["manualUrl"] = new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null, Format = UriFormat },
+                ["msrpPrice"] = new OpenApiSchema { Type = JsonSchemaType.Number | JsonSchemaType.Null, Format = DecimalFormat },
                 ["serialNumber"] = new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null },
-                ["purchaseDate"] = new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null, Format = "date-time" },
-                ["pricePaid"] = new OpenApiSchema { Type = JsonSchemaType.Number | JsonSchemaType.Null, Format = "decimal" },
+                ["purchaseDate"] = new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null, Format = DateTimeFormat },
+                ["pricePaid"] = new OpenApiSchema { Type = JsonSchemaType.Number | JsonSchemaType.Null, Format = DecimalFormat },
                 ["description"] = new OpenApiSchema { Type = JsonSchemaType.String | JsonSchemaType.Null },
             },
         };
