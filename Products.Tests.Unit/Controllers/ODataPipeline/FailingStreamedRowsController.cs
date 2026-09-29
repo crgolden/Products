@@ -8,6 +8,13 @@ public sealed class FailingStreamedRowsController : ODataController
 {
     internal static readonly string EntitySetName = ConventionalEntitySets.For<FailingStreamedRowsController>();
 
+    private readonly PipelineRows _rows;
+
+    public FailingStreamedRowsController(PipelineRows rows)
+    {
+        _rows = rows;
+    }
+
     [EnableQuery]
-    public IQueryable<PipelineRow> Get() => PipelineRows.FailingAfterTheRows();
+    public IQueryable<PipelineRow> Get() => _rows.FailingAfterTheRows();
 }

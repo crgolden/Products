@@ -9,7 +9,14 @@ public sealed class FailingMaterializedRowsController : ODataController
 {
     internal static readonly string EntitySetName = ConventionalEntitySets.For<FailingMaterializedRowsController>();
 
+    private readonly PipelineRows _rows;
+
+    public FailingMaterializedRowsController(PipelineRows rows)
+    {
+        _rows = rows;
+    }
+
     [EnableQuery]
     [MaterializeODataList]
-    public IQueryable<PipelineRow> Get() => PipelineRows.FailingAfterTheRows();
+    public IQueryable<PipelineRow> Get() => _rows.FailingAfterTheRows();
 }

@@ -1,17 +1,21 @@
 namespace Products.Tests.Unit.Controllers.ODataPipeline;
 
-internal static class PipelineRows
+public sealed class PipelineRows
 {
-    internal static readonly int RowsBeforeTheFailure = Random.Shared.Next(1, 5);
+    public PipelineRows()
+    {
+        var rowsBeforeTheFailure = Random.Shared.Next(1, 5);
+        Rows = Enumerable
+            .Range(0, rowsBeforeTheFailure)
+            .Select(_ => RowWithDetail())
+            .ToArray();
+    }
 
-    internal static readonly PipelineRow[] Rows = Enumerable
-        .Range(0, RowsBeforeTheFailure)
-        .Select(_ => RowWithDetail())
-        .ToArray();
+    internal IReadOnlyList<PipelineRow> Rows { get; }
 
-    internal static IQueryable<PipelineRow> AllRows() => Rows.AsQueryable();
+    internal IQueryable<PipelineRow> AllRows() => Rows.AsQueryable();
 
-    internal static IQueryable<PipelineRow> FailingAfterTheRows() => YieldThenFail().AsQueryable();
+    internal IQueryable<PipelineRow> FailingAfterTheRows() => YieldThenFail().AsQueryable();
 
     private static PipelineRow RowWithDetail()
     {
@@ -27,7 +31,7 @@ internal static class PipelineRows
         };
     }
 
-    private static IEnumerable<PipelineRow> YieldThenFail()
+    private IEnumerable<PipelineRow> YieldThenFail()
     {
         foreach (var row in Rows)
         {

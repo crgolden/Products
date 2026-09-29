@@ -21,6 +21,8 @@ public sealed class MaterializeODataListPipelineTests : IAsyncLifetime
 
     private static readonly string DetailEntitySetName = Generated.NewEntitySetName();
 
+    private readonly PipelineRows _rows = new();
+
     private WebApplication? _app;
 
     private HttpClient? _client;
@@ -30,6 +32,7 @@ public sealed class MaterializeODataListPipelineTests : IAsyncLifetime
         var builder = WebApplication.CreateBuilder();
         builder.Logging.ClearProviders();
         builder.WebHost.UseTestServer();
+        builder.Services.AddSingleton(_rows);
         builder.Services.AddControllers().AddOData(options =>
         {
             var modelBuilder = new ODataConventionModelBuilder();
@@ -111,7 +114,7 @@ public sealed class MaterializeODataListPipelineTests : IAsyncLifetime
 
         // Assert
         Assert.Equal(streamed, materialized);
-        Assert.All(PipelineRows.Rows, row => Assert.Contains(row.Name, materialized, StringComparison.Ordinal));
+        Assert.All(_rows.Rows, row => Assert.Contains(row.Name, materialized, StringComparison.Ordinal));
     }
 
     [Fact]
@@ -126,9 +129,9 @@ public sealed class MaterializeODataListPipelineTests : IAsyncLifetime
 
         // Assert
         Assert.Equal(streamed, materialized);
-        Assert.All(PipelineRows.Rows, row => Assert.Contains(row.Id.ToString(), materialized, StringComparison.Ordinal));
-        Assert.All(PipelineRows.Rows, row => Assert.Contains(row.Detail.Id.ToString(), materialized, StringComparison.Ordinal));
-        Assert.All(PipelineRows.Rows, row => Assert.Contains(row.Detail.Label, materialized, StringComparison.Ordinal));
+        Assert.All(_rows.Rows, row => Assert.Contains(row.Id.ToString(), materialized, StringComparison.Ordinal));
+        Assert.All(_rows.Rows, row => Assert.Contains(row.Detail.Id.ToString(), materialized, StringComparison.Ordinal));
+        Assert.All(_rows.Rows, row => Assert.Contains(row.Detail.Label, materialized, StringComparison.Ordinal));
     }
 
     private static string ListUrl(string entitySetName, string? query = null) =>
