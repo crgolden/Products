@@ -50,6 +50,10 @@ jobs:
     name: Build and analyze
     needs: sync-lock-files
     runs-on: windows-latest
+    concurrency:
+      group: products-integration-database
+      cancel-in-progress: false
+      queue: max
     permissions:
       id-token: write
       contents: read
