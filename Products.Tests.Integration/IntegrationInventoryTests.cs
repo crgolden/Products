@@ -3,6 +3,9 @@ namespace Products.Tests.Integration;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
+using MongoDB.Driver;
+using Products.HostedServices;
 using Products.Models;
 using Products.OpenApi;
 using Products.Tests.Integration.Infrastructure;
@@ -16,9 +19,12 @@ public sealed class IntegrationInventoryTests : IDisposable
 
     private readonly HttpClient _client;
 
+    private readonly IMongoDatabase _database;
+
     public IntegrationInventoryTests(ProductsWebApplicationFactory factory)
     {
         _client = factory.CreateClient();
+        _database = factory.Services.GetRequiredService<IMongoDatabase>();
     }
 
     [Fact]
@@ -39,6 +45,61 @@ public sealed class IntegrationInventoryTests : IDisposable
         Assert.Equal(name, item.GetProperty(JsonPropertyName(nameof(InventoryItemView.Name))).GetString());
         Assert.Equal(brand, item.GetProperty(JsonPropertyName(nameof(InventoryItemView.Brand))).GetString());
         Assert.Equal(serialNumber, item.GetProperty(JsonPropertyName(nameof(InventoryItemView.SerialNumber))).GetString());
+    }
+
+    [Fact]
+    public async Task GetMyInventoryItem_OwnersItem_ReturnsItMergedWithItsCatalogFacts()
+    {
+        var name = Generated.NewProductName();
+        var brand = Generated.NewBrand();
+        var modelNumber = Generated.NewModelNumber();
+        var serialNumber = Generated.NewModelNumber();
+
+        var itemId = await AddToInventoryAsync(name, brand, modelNumber, serialNumber);
+        var response = await _client.GetAsync(InventoryItemPath(itemId), TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var item = await response.Content.ReadFromJsonAsync<JsonElement>(
+            TestContext.Current.CancellationToken);
+        Assert.Equal(itemId, item.GetProperty(JsonPropertyName(nameof(InventoryItemView.Id))).GetGuid());
+        Assert.Equal(name, item.GetProperty(JsonPropertyName(nameof(InventoryItemView.Name))).GetString());
+        Assert.Equal(brand, item.GetProperty(JsonPropertyName(nameof(InventoryItemView.Brand))).GetString());
+        Assert.Equal(modelNumber, item.GetProperty(JsonPropertyName(nameof(InventoryItemView.ModelNumber))).GetString());
+        Assert.Equal(serialNumber, item.GetProperty(JsonPropertyName(nameof(InventoryItemView.SerialNumber))).GetString());
+    }
+
+    [Fact]
+    public async Task GetMyInventoryItem_AnotherOwnersItem_Returns404()
+    {
+        var anotherOwnersItemId = Guid.NewGuid();
+        var anotherOwnerId = Guid.NewGuid();
+        var unrelatedCatalogProductId = Guid.NewGuid();
+        var anotherOwnersItem = new InventoryItem
+        {
+            Id = anotherOwnersItemId,
+            OwnerId = anotherOwnerId,
+            CatalogProductId = unrelatedCatalogProductId,
+            CreatedAt = DateTimeOffset.UtcNow,
+            SerialNumber = Generated.NewModelNumber(),
+        };
+        await _database
+            .GetCollection<InventoryItem>(InventoryItemIndexInitializer.CollectionName)
+            .InsertOneAsync(anotherOwnersItem, cancellationToken: TestContext.Current.CancellationToken);
+
+        var response = await _client.GetAsync(
+            InventoryItemPath(anotherOwnersItemId), TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetMyInventoryItem_NoSuchItem_Returns404()
+    {
+        var missingItemId = Guid.NewGuid();
+
+        var response = await _client.GetAsync(InventoryItemPath(missingItemId), TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
@@ -182,6 +243,9 @@ public sealed class IntegrationInventoryTests : IDisposable
 
     private static string JsonPropertyName(string memberName) =>
         JsonNamingPolicy.CamelCase.ConvertName(memberName);
+
+    private static string InventoryItemPath(Guid itemId) =>
+        $"{ODataQueryParameterTransformer.AddToInventoryPath}/{itemId}";
 
     private static string NegatedStringFunctionFilter(string function, string propertyName, string marker) =>
         $"{ODataQueryParameterTransformer.CatalogProductsPath}" +

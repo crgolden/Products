@@ -138,6 +138,81 @@ public class InventoryControllerTests
     }
 
     [Fact]
+    public async Task GetMyInventoryItem_NoSubClaim_ReturnsUnauthorized()
+    {
+        // Arrange
+        var requestedItemId = Guid.NewGuid();
+        _controller.ControllerContext = MakeControllerContext(userId: null);
+
+        // Act
+        var result = await _controller.GetMyInventoryItem(requestedItemId, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.IsType<UnauthorizedResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task GetMyInventoryItem_OwnersItem_ReturnsItMergedWithItsCatalogFacts()
+    {
+        // Arrange
+        var ownerId = Guid.NewGuid();
+        var catalogProduct = MakeCatalogProduct();
+        var item = MakeItem(ownerId, catalogProduct.Id);
+        _controller.ControllerContext = MakeControllerContext(ownerId);
+        SetupItemsReturn([item]);
+        SetupCatalogReturns([catalogProduct]);
+
+        // Act
+        var result = await _controller.GetMyInventoryItem(item.Id, TestContext.Current.CancellationToken);
+
+        // Assert
+        var view = Assert.IsType<InventoryItemView>(GetValue(result));
+        Assert.Equal(item.Id, view.Id);
+        Assert.Equal(catalogProduct.Id, view.CatalogProductId);
+        Assert.Equal(catalogProduct.Name, view.Name);
+        Assert.Equal(catalogProduct.Brand, view.Brand);
+        Assert.Equal(catalogProduct.MsrpPrice, view.MsrpPrice);
+        Assert.Equal(item.SerialNumber, view.SerialNumber);
+        Assert.Equal(item.PricePaid, view.PricePaid);
+    }
+
+    [Fact]
+    public async Task GetMyInventoryItem_NoItemFound_ReturnsNotFoundWithoutReadingTheCatalog()
+    {
+        // Arrange
+        var ownerId = Guid.NewGuid();
+        var requestedItemId = Guid.NewGuid();
+        _controller.ControllerContext = MakeControllerContext(ownerId);
+        SetupItemsReturn([]);
+
+        // Act
+        var result = await _controller.GetMyInventoryItem(requestedItemId, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.IsType<NotFoundResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task GetMyInventoryItem_CatalogProductIsMissing_StillReturnsTheItem()
+    {
+        // Arrange
+        var ownerId = Guid.NewGuid();
+        var missingCatalogProductId = Guid.NewGuid();
+        var item = MakeItem(ownerId, missingCatalogProductId);
+        _controller.ControllerContext = MakeControllerContext(ownerId);
+        SetupItemsReturn([item]);
+        SetupCatalogReturns([]);
+
+        // Act
+        var result = await _controller.GetMyInventoryItem(item.Id, TestContext.Current.CancellationToken);
+
+        // Assert
+        var view = Assert.IsType<InventoryItemView>(GetValue(result));
+        Assert.Equal(item.Id, view.Id);
+        Assert.Null(view.Name);
+    }
+
+    [Fact]
     public async Task AddToInventory_ReturnsUnauthorized_WhenThereIsNoSubClaim()
     {
         // Arrange
@@ -202,6 +277,9 @@ public class InventoryControllerTests
     };
 
     private static object? GetValue(ActionResult<IReadOnlyList<InventoryItemView>> result) =>
+        Assert.IsType<OkObjectResult>(result.Result).Value;
+
+    private static object? GetValue(ActionResult<InventoryItemView> result) =>
         Assert.IsType<OkObjectResult>(result.Result).Value;
 
     private static CatalogProduct MakeCatalogProduct()

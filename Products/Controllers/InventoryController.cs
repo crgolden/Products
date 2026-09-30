@@ -56,6 +56,33 @@ public class InventoryController : ControllerBase
         return Ok(views);
     }
 
+    [HttpGet("items/{id:guid}")]
+    public async Task<ActionResult<InventoryItemView>> GetMyInventoryItem(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        if (CurrentUserId is not { } ownerId)
+        {
+            return Unauthorized();
+        }
+
+        var itemCursor = await _inventoryItems.FindAsync(
+            i => i.Id == id && i.OwnerId == ownerId,
+            cancellationToken: cancellationToken);
+        var item = await itemCursor.FirstOrDefaultAsync(cancellationToken);
+        if (item is null)
+        {
+            return NotFound();
+        }
+
+        var catalogCursor = await _catalogProducts.FindAsync(
+            c => c.Id == item.CatalogProductId,
+            cancellationToken: cancellationToken);
+        var catalogProduct = await catalogCursor.FirstOrDefaultAsync(cancellationToken);
+
+        return Ok(Merge(item, catalogProduct));
+    }
+
     [HttpPost("items")]
     public async Task<IActionResult> AddToInventory(
         [FromBody] AddToInventoryRequest request,
