@@ -49,11 +49,11 @@ public sealed class ProductsWebApplicationFactory : WebApplicationFactory<Progra
         builder.ConfigureServices((context, services) =>
         {
             var databaseName = context.Configuration[MongoSettingKeys.DatabaseName];
-            if (databaseName is null || !databaseName.EndsWith(TestDatabaseContractConstants.TestDatabaseSuffix, StringComparison.Ordinal))
+            if (!TestDatabaseContract.IsDisposableDatabase(databaseName))
             {
                 RefusedDatabase = databaseName;
                 throw new InvalidOperationException(
-                    $"The integration tier writes to the database it is given, so it refuses '{databaseName}': {MongoSettingKeys.DatabaseName} must end in '{TestDatabaseContractConstants.TestDatabaseSuffix}'.");
+                    $"The integration tier writes to the database it is given, so it refuses '{databaseName}': {MongoSettingKeys.DatabaseName} must end in '{TestDatabaseContractConstants.TestDatabaseSuffix}' or '{TestDatabaseContractConstants.TriageDatabaseSuffix}'.");
             }
 
             services.AddAuthentication(TestScheme)
@@ -64,7 +64,7 @@ public sealed class ProductsWebApplicationFactory : WebApplicationFactory<Progra
     private async Task DeleteEveryDocumentInTheTestDatabaseAsync()
     {
         var database = Services.GetRequiredService<IMongoDatabase>();
-        if (!database.DatabaseNamespace.DatabaseName.EndsWith(TestDatabaseContractConstants.TestDatabaseSuffix, StringComparison.Ordinal))
+        if (!TestDatabaseContract.IsDisposableDatabase(database.DatabaseNamespace.DatabaseName))
         {
             return;
         }

@@ -16,7 +16,7 @@ $repo = $PSScriptRoot
 $sarif = (Join-Path $gateOutput 'products-inspect.sarif')
 $unitTrx = Join-Path $repo 'Products.Tests.Unit\bin\Release\net10.0\TestResults\unit-tests.trx'
 $integrationTrx = Join-Path $repo 'Products.Tests.Integration\bin\Release\net10.0\TestResults\integration-tests.trx'
-$sonarBranch = "branch-local-$($env:COMPUTERNAME.ToLowerInvariant())"
+$sonarBranch = Get-SonarBranchName
 $beginSonar = "Begin Sonar analysis (branch $sonarBranch)"
 $build = 'Build with dotnet (Release, RestoreLockedMode)'
 $endSonar = 'End Sonar analysis (quality gate waited)'
@@ -76,7 +76,7 @@ if (-not (Test-StepCarried $unit)) {
 if (-not (Test-StepCarried $integration)) {
     if (Test-Path $integrationTrx) { Remove-Item $integrationTrx -Force }
     $env:ASPNETCORE_ENVIRONMENT = 'Development'
-    $env:MongoDatabaseName = 'crgoldenTest'
+    $env:MongoDatabaseName ??= 'crgoldenTest'
     $global:LASTEXITCODE = $null
     dotnet coverlet Products.Tests.Integration\bin\Release\net10.0 `
         --target "dotnet" `

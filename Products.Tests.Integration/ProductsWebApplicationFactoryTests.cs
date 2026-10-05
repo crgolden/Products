@@ -7,7 +7,7 @@ using Products.Tests.Integration.Infrastructure;
 public sealed class ProductsWebApplicationFactoryTests
 {
     [Fact]
-    public void StartingAgainstADatabaseWithoutTheTestSuffix_IsRefusedBeforeAnythingIsWritten()
+    public void StartingAgainstADatabaseWithoutADisposableSuffix_IsRefusedBeforeAnythingIsWritten()
     {
         var productionLikeDatabase = Generated.NewDatabaseName();
         using var configuredFactory = new ProductsWebApplicationFactory();
