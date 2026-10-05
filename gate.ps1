@@ -1,4 +1,4 @@
-param([string]$Goal)
+param([string]$Goal, [string[]]$Steps)
 
 $ErrorActionPreference = 'Continue'
 $gateCommon = Join-Path $PSScriptRoot '..\Tools\Gates\GateCommon.ps1'
@@ -12,6 +12,17 @@ New-Item -ItemType Directory -Force -Path $gateOutput | Out-Null
 Register-GateSteps @('Local MongoDB service', 'Restore local tools', 'Begin Sonar analysis', 'Build with dotnet',
     'jb inspectcode', 'Run unit tests with coverage', 'Run integration tests with coverage', 'End Sonar analysis',
     'Fail on open Sonar issues')
+Register-StepInputs @{
+    'Local MongoDB service'               = @('*')
+    'Restore local tools'                 = @('dotnet-tools.json')
+    'Begin Sonar analysis'                = @('*')
+    'Build with dotnet'                   = @('*')
+    'jb inspectcode'                      = @('*')
+    'Run unit tests with coverage'        = @('*')
+    'Run integration tests with coverage' = @('*')
+    'End Sonar analysis'                  = @('*')
+    'Fail on open Sonar issues'           = @('*')
+}
 $repo = $PSScriptRoot
 $sarif = (Join-Path $gateOutput 'products-inspect.sarif')
 $unitTrx = Join-Path $repo 'Products.Tests.Unit\bin\Release\net10.0\TestResults\unit-tests.trx'
@@ -27,6 +38,7 @@ $env:TZ = 'UTC'
 if ($env:TZ -ne 'UTC') { Write-Host 'GATE: FAILED (TZ pin)'; exit 1 }
 Set-Location $repo
 Initialize-GateState 'Products' $repo
+Assert-RequestedSteps $Steps
 Invoke-CatalogSteps
 
 $mongo = Get-Service -Name 'MongoDB' -ErrorAction SilentlyContinue
