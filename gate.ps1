@@ -41,9 +41,24 @@ Initialize-GateState 'Products' $repo
 Assert-RequestedSteps $Steps
 Invoke-CatalogSteps
 
-$mongo = Get-Service -Name 'MongoDB' -ErrorAction SilentlyContinue
-if (-not $mongo -or $mongo.Status -ne 'Running') { Stop-Gate 'Local MongoDB service' "not running ($($mongo.Status)); start it, never point the tier elsewhere" }
-Write-Row 'Local MongoDB service' 'PASS' 'Running'
+if (-not [string]::IsNullOrWhiteSpace($env:MongoServerHost)) {
+    if ([string]::IsNullOrWhiteSpace($env:MongoServerPort)) { Stop-Gate 'Local MongoDB service' 'MongoServerHost is set in the environment without MongoServerPort' }
+    $mongoEndpoint = "$($env:MongoServerHost):$($env:MongoServerPort)"
+    $mongoReachable = $false
+    $mongoDeadline = [DateTimeOffset]::UtcNow.AddSeconds(60)
+    while (-not $mongoReachable -and [DateTimeOffset]::UtcNow -lt $mongoDeadline) {
+        $mongoProbe = [Net.Sockets.TcpClient]::new()
+        try { $mongoReachable = $mongoProbe.ConnectAsync($env:MongoServerHost, [int]$env:MongoServerPort).Wait(5000) -and $mongoProbe.Connected } catch { $mongoReachable = $false } finally { $mongoProbe.Dispose() }
+        if (-not $mongoReachable) { Start-Sleep -Seconds 5 }
+    }
+    if (-not $mongoReachable) { Stop-Gate 'Local MongoDB service' "nothing accepted a connection on $mongoEndpoint (MongoServerHost from the environment) within 60 seconds" }
+    Write-Row 'Local MongoDB service' 'PASS' "MongoServerHost taken from the environment, and $mongoEndpoint accepts connections"
+}
+else {
+    $mongo = Get-Service -Name 'MongoDB' -ErrorAction SilentlyContinue
+    if (-not $mongo -or $mongo.Status -ne 'Running') { Stop-Gate 'Local MongoDB service' "not running ($($mongo.Status)); start it, or set MongoServerHost and MongoServerPort to name another test server" }
+    Write-Row 'Local MongoDB service' 'PASS' 'Running'
+}
 
 $global:LASTEXITCODE = $null
 dotnet tool restore
