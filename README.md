@@ -4,118 +4,119 @@
 
 [![Quality gate](https://sonarcloud.io/api/project_badges/quality_gate?project=crgolden_Products)](https://sonarcloud.io/summary/new_code?id=crgolden_Products)
 
-ASP.NET Core 10 OData v4 data API managing a `Products` collection in the `crgolden` MongoDB database. Read endpoints are anonymous; write endpoints require a JWT Bearer token with the `products` scope and resource-based ownership. Observable via OpenTelemetry (Grafana Alloy) and documented via OpenAPI.
+An ASP.NET Core 10 OData v4 API over MongoDB with two entities at two trust levels: `CatalogProduct`, shared product
+facts anyone may read, and `InventoryItem`, a signed-in user's private record of a product they own. Writes need a
+JWT access token whose `scope` claim includes `products`.
 
-## Sibling Applications
+How the parts fit together and the rules each keeps: [ARCHITECTURE.md](ARCHITECTURE.md). How to run every test tier:
+[TESTING.md](TESTING.md).
 
-Products is a **resource server** in a five-app system. Reads are public; writes require a `products`-scoped JWT and ownership of the row.
+## Technologies
 
-| Repo | Role | How Products interacts |
+- .NET 10, ASP.NET Core, `Microsoft.AspNetCore.OData` (OData v4), the MongoDB C# driver.
+- JWT Bearer authentication against any OIDC provider.
+- OpenAPI at `/openapi/v1.json`; a MongoDB health check at `/health`.
+- In production only: OpenTelemetry (OTLP), Serilog to Elasticsearch, and Azure Blob Storage plus Key Vault for data
+  protection keys.
+- xUnit v3 on Microsoft.Testing.Platform; coverlet, ReSharper `jb inspectcode` and SonarCloud in CI.
+
+## API
+
+| Route | Auth | Notes |
 |---|---|---|
-| [Identity](https://github.com/crgolden/Identity) | OIDC Identity Provider | Issues the access tokens Products validates (scope `products`) |
-| [Inventory](https://github.com/crgolden/Inventory) | Angular SPA + ASP.NET Core BFF | Sole client today — the BFF proxies authenticated calls to `/odata/Products` and an anonymous public-catalog passthrough |
-| [Manuals](https://github.com/crgolden/Manuals) | Azure OpenAI chat API | Sets the `Product.ManualUrl` field via the chat panel embedded in the Inventory product form |
-| [Infrastructure](https://github.com/crgolden/Infrastructure) | Health monitoring dashboard | Polls Products' `/health` endpoint |
+| `GET /odata/CatalogProducts`, `GET /odata/CatalogProducts({key})` | anonymous | OData `$select`, `$filter`, `$orderby`, `$expand`, `$count`, `$top` (at most 100) |
+| `POST`, `PATCH`, `DELETE /odata/CatalogProducts[({key})]` | `products` scope | `Id`, `CreatedAt`, `UpdatedAt` and `MatchKey` are set by the server; a duplicate brand and model returns 409; `DELETE` returns 409 while any inventory item references the row |
+| `GET`, `POST`, `PATCH`, `DELETE /odata/InventoryItems[({key})]` | `products` scope | only the caller's own items (`OwnerId` is the token's `sub`), so another user's item is 404, never 403 |
+| `GET /inventory/items?search=`, `GET /inventory/items/{id}`, `POST /inventory/items` | `products` scope | the caller's items merged with their catalog facts; `POST` finds or creates the catalog row and adds the item |
+| `GET /health` | anonymous | pings MongoDB |
+| `GET /openapi/v1.json` | anonymous | the OpenAPI document, with the OData routes described by hand |
 
-## Tech Stack
+## Prerequisites
 
-- **.NET 10** / ASP.NET Core
-- **MongoDB** (Driver 3.x) — `crgolden` database, `Products` collection
-- **OData v4** (`Microsoft.AspNetCore.OData`) — server-side filtering via MongoDB aggregation pipelines
-- **OpenAPI** (`Microsoft.AspNetCore.OpenApi`) — discoverable API contract at `/openapi/v1.json`
-- **JWT Bearer / OIDC** — all endpoints require `scope: products`
-- **Azure** — Key Vault (secrets), Blob Storage (data protection)
-- **OpenTelemetry** → Grafana Alloy (OTLP traces & metrics)
-- **Serilog** → Elasticsearch (`logs-app-products` data stream)
+- The .NET 10 SDK (`global.json` pins `10.0.201` and rolls forward to the latest feature band).
+- A GitHub personal access token with the `read:packages` scope. The `Shared` package restores from the `crgolden`
+  GitHub Packages feed (`NuGet.Config`), which asks for a token even for a public package. Store it as that source's
+  credentials in your user NuGet configuration, never in this repo:
 
-## API Endpoints
+  ```powershell
+  dotnet nuget update source GitHub --username <your GitHub user> --password <token> --store-password-in-clear-text --configfile "$env:APPDATA\NuGet\NuGet.Config"
+  ```
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| `GET` | `/odata/Products` | Anonymous | List products. Anonymous callers get all products; authenticated callers (Bearer + `products` scope) are filtered to their own (`OwnerId == sub`). |
-| `GET` | `/odata/Products({key})` | Anonymous | Get a single product by GUID |
-| `POST` | `/odata/Products` | Bearer + `products` | Create a new product; `OwnerId` is set from the JWT `sub` claim |
-| `PUT` | `/odata/Products({key})` | Bearer + `products` + owner | Replace a product (403 if not owner) |
-| `PATCH` | `/odata/Products({key})` | Bearer + `products` + owner | Partially update a product (403 if not owner) |
-| `DELETE` | `/odata/Products({key})` | Bearer + `products` + owner | Delete a product (403 if not owner) |
+  If the `GitHub` source is not in your user configuration yet, use `dotnet nuget add source https://nuget.pkg.github.com/crgolden/index.json --name GitHub ...` with the same options.
+- MongoDB, local or remote, with a user that can read and write the database the app uses.
+- An OIDC provider for the authenticated endpoints. The anonymous catalog reads work without one.
 
-OIDC tokens are issued by [Identity](https://github.com/crgolden/Identity); the [Inventory](https://github.com/crgolden/Inventory) BFF forwards them automatically when proxying `/products/api/**`.
+## Clone and build
 
-### OData Query Options (list endpoint)
-
-`$filter`, `$select`, `$orderby`, `$top` (max 100), `$skip`, `$count`, `$expand`
-
-**Example:**
+```powershell
+git clone https://github.com/crgolden/Products.git
+cd Products
+dotnet tool restore
+dotnet build Products.slnx
 ```
-GET /odata/Products?$filter=Name eq 'Widget'&$orderby=Price desc&$top=10
-```
-
-## Data Model
-
-| Property | Type | Notes |
-|----------|------|-------|
-| `Id` | `Guid` | Stored as string in MongoDB (`_id`) |
-| `Name` | `string?` | Indexed (ascending) |
-| `Price` | `decimal?` | |
-| `Brand` | `string?` | |
-| `ModelNumber` | `string?` | |
-| `SerialNumber` | `string?` | |
-| `PurchaseDate` | `DateTimeOffset?` | |
-| `Category` | `string?` | |
-| `Description` | `string?` | |
-| `ManualUrl` | `string?` | Populated from the [Manuals](https://github.com/crgolden/Manuals) chat panel embedded in the [Inventory](https://github.com/crgolden/Inventory) product form. **`string` is the OData representation of a URL, not a weaker stand-in for `Uri`:** the Core vocabulary's `IsURL` term carries `Core.RequiresType = Edm.String`, so a URL property is a string by specification. A `Uri` here has no EDM primitive to map to and becomes a complex type exposing only `Segments` — no scheme, no host, and immutable so no write can deserialize it |
-| `OwnerId` | `Guid?` | Server-managed: set on POST from the JWT `sub` claim; never accepted from client input |
-| `CreatedAt` | `DateTimeOffset` | Set on POST, preserved on PUT/PATCH |
-| `UpdatedAt` | `DateTimeOffset?` | Set on PUT/PATCH |
-
-**Indexes** (created on startup): `Name` (ascending), `CreatedAt` (descending), and `OwnerId` (ascending).
 
 ## Configuration
 
-The following configuration keys are required. In production they are sourced from Azure Key Vault; locally, use [User Secrets](https://learn.microsoft.com/en-us/aspnet/core/security/app-secrets).
+`appsettings.Development.json` holds the non-secret development values (MongoDB on `localhost:27017` without TLS,
+database `crgolden`, OIDC authority `https://localhost:7261`); change them there or override them. The secrets go in
+User Secrets for the `Products` project:
 
-| Key | Source | Description |
-|-----|--------|-------------|
-| `MongoServerHost` | Config | MongoDB server hostname |
-| `MongoServerPort` | Config | MongoDB server port |
-| `MongoUseTls` | Config | `true` to require TLS to MongoDB |
-| `MongoDatabaseName` | Config | Target database name |
-| `MongoDbUsername` | Key Vault secret | MongoDB SCRAM-SHA-256 username |
-| `MongoDbPassword` | Key Vault secret | MongoDB SCRAM-SHA-256 password |
-| `OidcAuthority` | Config | OIDC authority URL for JWT validation |
-| `BlobUri` | Config | Azure Blob Storage URL for data protection keys (production only) |
-| `DataProtectionKeyIdentifier` | Config | Azure Key Vault key URI for data protection (production only) |
-| `WEBSITE_SITE_NAME` | Config | App Service site name; used as the OpenTelemetry/Serilog service name (production only — App Service sets it automatically) |
-| `AlloyEndpoint` | Config | OTLP endpoint for OpenTelemetry metrics/traces export (production only) |
-| `ElasticsearchNode` | Config | Elasticsearch node URL |
-| `ElasticsearchUsername` | Key Vault secret | Elasticsearch username |
-| `ElasticsearchPassword` | Key Vault secret | Elasticsearch password |
-
-## Local Development
-
-```bash
-# Prerequisites: User Secrets configured, ASPNETCORE_ENVIRONMENT=Development
-
-# Build
-dotnet build Products/
-
-# Run
-dotnet run --project Products/
-
-# View OpenAPI doc
-curl https://localhost:{port}/openapi/v1.json
-
-# Run unit tests (no Azure creds required)
-dotnet build Products.Tests.Unit --configuration Debug
-.\Products.Tests.Unit\bin\Debug\net10.0\Products.Tests.Unit.exe -trait "Category=Unit" -showLiveOutput
+```powershell
+dotnet user-secrets set MongoDbUsername "<user>" --project Products
+dotnet user-secrets set MongoDbPassword "<password>" --project Products
 ```
 
-See [TESTING.md](TESTING.md) for the full testing guide — unit tests, integration tests against real MongoDB, and CI pipeline details.
+| Key | Needed | Purpose |
+|---|---|---|
+| `MongoServerHost`, `MongoServerPort`, `MongoUseTls` | always | where MongoDB is and whether to use TLS |
+| `MongoDatabaseName` | always | the database; the user authenticates against it (SCRAM-SHA-256) |
+| `MongoDbUsername`, `MongoDbPassword` | always | MongoDB credentials (secrets) |
+| `OidcAuthority` | always | the OIDC authority whose tokens the API accepts |
+| `BlobUri`, `DataProtectionKeyIdentifier` | Production | Blob container and Key Vault key for data protection |
+| `ElasticsearchNode`, `ElasticsearchUsername`, `ElasticsearchPassword` | Production | log shipping |
+| `AlloyEndpoint` | Production | OTLP endpoint for traces and metrics |
+| `WEBSITE_SITE_NAME` | Production | the service name for logs and telemetry (App Service sets it) |
+| `DefaultAzureCredentialOptions` | Production | which Azure credential to use, in `appsettings.Production.json` |
 
-## Health Check
+Outside Production the app uses ephemeral data protection and logs to the console, so it needs no Azure access.
 
+## Run locally
+
+```powershell
+$env:ASPNETCORE_ENVIRONMENT = "Development"
+dotnet run --project Products
 ```
-GET /health
+
+It listens on `https://localhost:7057` (`Properties/launchSettings.json`). `Products/Products.http` holds example
+requests.
+
+## Tests
+
+```powershell
+dotnet test --project Products.Tests.Unit --configuration Release -- --filter-trait "Category=Unit"
 ```
 
-Returns `Healthy` when the application is running. No authentication required.
+The unit tier needs no network, database or secrets. The integration tier needs a MongoDB database whose name ends in
+`Test`; [TESTING.md](TESTING.md) has the setup for both.
+
+## Gate
+
+`gate.ps1` is the maintainers' gate. It loads a private toolkit from a folder beside this repo, so in a plain clone it
+stops at once with `GATE: FAILED`. To gate your own change, run the checks CI runs, in this order:
+
+```powershell
+dotnet tool restore
+dotnet build --no-incremental --configuration Release /p:RestoreLockedMode=true -warnaserror
+dotnet jb inspectcode Products.slnx --no-build -e=WARNING --output=inspectcode.sarif
+dotnet test --project Products.Tests.Unit --no-build --configuration Release -- --filter-trait "Category=Unit"
+dotnet test --project Products.Tests.Integration --no-build --configuration Release -- --filter-trait "Category=Integration"
+```
+
+`jb inspectcode` passes only when `inspectcode.sarif` holds no results; the integration tier needs the database setup in
+[TESTING.md](TESTING.md).
+
+## Deployment
+
+`.github/workflows/main_crgolden-products.yml` builds, inspects and tests every push and pull request, then on a push
+to `main` publishes for `win-x86` and deploys to an Azure App Service through OIDC federated credentials held in the
+repo's secrets.
