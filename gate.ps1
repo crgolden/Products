@@ -1,4 +1,4 @@
-param([string]$Goal)
+param([string]$Goal, [string]$Probe)
 
 $ErrorActionPreference = 'Continue'
 $gateCommon = $env:GATE_LIBRARY
@@ -40,7 +40,7 @@ $integration = 'Run integration tests with coverage (Category=Integration)'
 $env:TZ = 'UTC'
 if ($env:TZ -ne 'UTC') { Write-Host 'GATE: FAILED (TZ pin)'; exit 1 }
 Set-Location $repo
-Initialize-GateState 'Products' $repo
+Initialize-GateState 'Products' $repo -Probe $Probe
 Resolve-OwedSteps
 Invoke-CatalogSteps
 
