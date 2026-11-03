@@ -21,8 +21,8 @@ Register-StepInputs @{
     'Begin Sonar analysis'                = @('*')
     'Build with dotnet'                   = @('*')
     'jb inspectcode'                      = @('*')
-    'Run unit tests with coverage'        = @('*')
-    'Run integration tests with coverage' = @('*')
+    'Run unit tests with coverage'        = @('*', '!Products.Tests.Integration/*')
+    'Run integration tests with coverage' = @('*', '!Products.Tests.Unit/*Tests.cs')
     'End Sonar analysis'                  = @('*')
     'Fail on open Sonar issues'           = @('*')
 }
