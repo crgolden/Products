@@ -8,9 +8,8 @@
 | Integration | `Category=Integration` | `Products.Tests.Integration` | a MongoDB database whose name ends in `Test` | every push and pull request except Dependabot's |
 
 Both are xUnit v3 projects on Microsoft.Testing.Platform (`global.json` selects the runner). Test data comes from the
-`Shared` package's `Shared.Testing.Generated`; `Products.Tests.Integration` also compiles
-`Products.Tests.Unit/TestSupport/ODataProtocolConstants.cs` through a linked `<Compile>` item, so that file's path is
-part of both builds.
+`Shared` package's `Shared.Testing.Generated`. Each project holds the OData protocol names it uses in its own
+`TestSupport/ODataProtocolConstants.cs`; neither compiles a file from the other.
 
 ### Unit tier
 

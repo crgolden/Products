@@ -9,7 +9,7 @@ using Products.HostedServices;
 using Products.Models;
 using Products.OpenApi;
 using Products.Tests.Integration.Infrastructure;
-using Products.Tests.Unit.TestSupport;
+using Products.Tests.Integration.TestSupport;
 
 [Collection(IntegrationCollection.Name)]
 [Trait("Category", "Integration")]
