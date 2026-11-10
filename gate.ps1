@@ -73,6 +73,7 @@ if ($Only) {
     Write-Host "PROBE: PASSED for the one test named, against the last build's binaries; no verdict was saved"
     exit 0
 }
+exit (Invoke-Gate {
 Initialize-GateState 'Products' $repo
 Resolve-OwedSteps
 Invoke-CatalogSteps
@@ -98,7 +99,7 @@ else {
 
 $global:LASTEXITCODE = $null
 dotnet tool restore
-$null = Test-Exit 'Restore local tools (dotnet tool restore)'
+Assert-StepExit 'Restore local tools (dotnet tool restore)'
 
 $sonarCarried = Test-StepCarried $sonarIssues
 if ($sonarCarried) {
@@ -111,11 +112,11 @@ else {
     $env:JAVA_HOME = Get-SonarScannerJavaHome $beginSonar
     $global:LASTEXITCODE = $null
     dotnet-sonarscanner begin /k:"crgolden_Products" /o:"crgolden" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.cs.opencover.reportsPaths="coverage.opencover.xml,coverage-integration.opencover.xml" /d:sonar.exclusions="**/bin/**,**/obj/**" /d:sonar.coverage.exclusions="**/Program.cs,**/gate.ps1" /d:sonar.qualitygate.wait=true /d:sonar.scanner.skipJreProvisioning=true /d:sonar.branch.name="$sonarBranch"
-    $null = Test-Exit $beginSonar
+    Assert-StepExit $beginSonar
 
     $global:LASTEXITCODE = $null
     dotnet build --no-incremental --configuration Release /p:RestoreLockedMode=true -warnaserror
-    $null = Test-Exit $build
+    Assert-StepExit $build
 }
 
 if (-not (Test-StepCarried 'jb inspectcode')) {
@@ -153,9 +154,10 @@ if (-not (Test-StepCarried $integration)) {
 if (-not $sonarCarried) {
     $global:LASTEXITCODE = $null
     dotnet-sonarscanner end
-    $null = Test-Exit $endSonar
+    Assert-StepExit $endSonar
     Test-SonarIssues $sonarIssues 'crgolden_Products' $sonarBranch $sonarStartedAt
 }
 
 Write-Row 'Upload test results / dotnet publish / Upload artifact / deploy' 'NOT RUN' 'delivery steps, not checks'
 Complete-Gate
+})
