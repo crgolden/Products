@@ -72,7 +72,7 @@ public sealed class ProductsWebApplicationFactory : WebApplicationFactory<Progra
         foreach (var collectionName in NonSeededCollections)
         {
             await database.GetCollection<BsonDocument>(collectionName)
-                .DeleteManyAsync(FilterDefinition<BsonDocument>.Empty, CancellationToken.None);
+                .DeleteManyAsync(FilterDefinition<BsonDocument>.Empty, TestContext.Current.CancellationToken);
         }
     }
 }

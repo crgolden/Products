@@ -29,7 +29,7 @@ public sealed class ODataQueryParameterTransformerTests
         var document = new OpenApiDocument();
 
         // Act
-        await transformer.TransformAsync(document, Context, CancellationToken.None);
+        await transformer.TransformAsync(document, Context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(document.Components?.SecuritySchemes?.ContainsKey(ODataQueryParameterTransformer.BearerSecuritySchemeName));
@@ -47,7 +47,7 @@ public sealed class ODataQueryParameterTransformerTests
         var document = new OpenApiDocument();
 
         // Act
-        await transformer.TransformAsync(document, Context, CancellationToken.None);
+        await transformer.TransformAsync(document, Context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.DoesNotContain(
@@ -63,7 +63,7 @@ public sealed class ODataQueryParameterTransformerTests
         var document = new OpenApiDocument();
 
         // Act
-        await transformer.TransformAsync(document, Context, CancellationToken.None);
+        await transformer.TransformAsync(document, Context, TestContext.Current.CancellationToken);
 
         // Assert
         var parameters = document.Paths[ODataQueryParameterTransformer.CatalogProductsPath].Operations?[HttpMethod.Get].Parameters;
@@ -80,7 +80,7 @@ public sealed class ODataQueryParameterTransformerTests
         var document = new OpenApiDocument();
 
         // Act
-        await transformer.TransformAsync(document, Context, CancellationToken.None);
+        await transformer.TransformAsync(document, Context, TestContext.Current.CancellationToken);
 
         // Assert
         var parameters = document.Paths[ODataQueryParameterTransformer.CatalogProductsPath].Operations?[HttpMethod.Get].Parameters;
@@ -106,7 +106,7 @@ public sealed class ODataQueryParameterTransformerTests
         var document = new OpenApiDocument();
 
         // Act
-        await transformer.TransformAsync(document, Context, CancellationToken.None);
+        await transformer.TransformAsync(document, Context, TestContext.Current.CancellationToken);
 
         // Assert
         var get = document.Paths[ODataQueryParameterTransformer.CatalogProductsPath].Operations?[HttpMethod.Get];
@@ -123,7 +123,7 @@ public sealed class ODataQueryParameterTransformerTests
         var document = new OpenApiDocument();
 
         // Act
-        await transformer.TransformAsync(document, Context, CancellationToken.None);
+        await transformer.TransformAsync(document, Context, TestContext.Current.CancellationToken);
 
         // Assert
         var get = document.Paths[ODataQueryParameterTransformer.InventoryItemsPath].Operations?[HttpMethod.Get];
@@ -141,7 +141,7 @@ public sealed class ODataQueryParameterTransformerTests
         var document = new OpenApiDocument();
 
         // Act
-        await transformer.TransformAsync(document, Context, CancellationToken.None);
+        await transformer.TransformAsync(document, Context, TestContext.Current.CancellationToken);
 
         // Assert
         var operations = document.Paths[path].Operations;
@@ -174,7 +174,7 @@ public sealed class ODataQueryParameterTransformerTests
         };
 
         // Act
-        await transformer.TransformAsync(document, Context, CancellationToken.None);
+        await transformer.TransformAsync(document, Context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(document.Components.SecuritySchemes);
@@ -198,7 +198,7 @@ public sealed class ODataQueryParameterTransformerTests
         };
 
         // Act
-        await transformer.TransformAsync(document, Context, CancellationToken.None);
+        await transformer.TransformAsync(document, Context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Same(catalogPathItem, document.Paths[ODataQueryParameterTransformer.CatalogProductsPath]);
