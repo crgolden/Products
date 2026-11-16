@@ -44,7 +44,7 @@ public class CatalogProductsController : ODataController
     [Authorize(Policy = nameof(Products))]
     [HttpPost]
     public async Task<IActionResult> Post(
-        [FromBody] CatalogProduct catalogProduct,
+        [FromBody] CreateCatalogProductRequest request,
         CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
@@ -52,9 +52,18 @@ public class CatalogProductsController : ODataController
             return BadRequest(ModelState);
         }
 
-        catalogProduct.Id = Guid.NewGuid();
-        catalogProduct.CreatedAt = DateTimeOffset.UtcNow;
-        catalogProduct.MatchKey = CatalogProductMatchKey.Compute(catalogProduct.Brand, catalogProduct.ModelNumber);
+        var catalogProduct = new CatalogProduct
+        {
+            Id = Guid.NewGuid(),
+            CreatedAt = DateTimeOffset.UtcNow,
+            Name = request.Name,
+            Brand = request.Brand,
+            ModelNumber = request.ModelNumber,
+            Category = request.Category,
+            ManualUrl = request.ManualUrl?.AbsoluteUri,
+            MsrpPrice = request.MsrpPrice,
+            MatchKey = CatalogProductMatchKey.Compute(request.Brand, request.ModelNumber),
+        };
         try
         {
             await _catalogProducts.InsertOneAsync(catalogProduct, cancellationToken: cancellationToken);

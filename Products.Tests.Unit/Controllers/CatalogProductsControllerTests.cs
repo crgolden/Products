@@ -56,7 +56,7 @@ public class CatalogProductsControllerTests
         var brand = Generated.NewBrand();
         var modelNumber = Generated.NewModelNumber();
         SetupInsertSucceeds();
-        var input = new CatalogProduct
+        var request = new CreateCatalogProductRequest
         {
             Name = Generated.NewProductName(),
             Brand = brand,
@@ -64,11 +64,11 @@ public class CatalogProductsControllerTests
         };
 
         // Act
-        var result = await _controller.Post(input, TestContext.Current.CancellationToken);
+        var result = await _controller.Post(request, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.IsType<CreatedODataResult<CatalogProduct>>(result);
-        Assert.Equal(CatalogProductMatchKey.Compute(brand, modelNumber), input.MatchKey);
+        var created = Assert.IsType<CreatedODataResult<CatalogProduct>>(result);
+        Assert.Equal(CatalogProductMatchKey.Compute(brand, modelNumber), created.Entity.MatchKey);
     }
 
     [Fact]
@@ -76,40 +76,38 @@ public class CatalogProductsControllerTests
     {
         // Arrange
         SetupInsertSucceeds();
-        var input = new CatalogProduct
+        var request = new CreateCatalogProductRequest
         {
             Name = Generated.NewProductName(),
             ModelNumber = Generated.NewModelNumber(),
         };
 
         // Act
-        await _controller.Post(input, TestContext.Current.CancellationToken);
+        var result = await _controller.Post(request, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Null(input.MatchKey);
+        var created = Assert.IsType<CreatedODataResult<CatalogProduct>>(result);
+        Assert.Null(created.Entity.MatchKey);
     }
 
     [Fact]
-    public async Task Post_NeverTrustsAClientSuppliedMatchKey()
+    public async Task Post_StoresTheManualUrlAsItsAbsoluteUri()
     {
         // Arrange
-        var brand = Generated.NewBrand();
-        var modelNumber = Generated.NewModelNumber();
-        var spoofedMatchKey = Generated.NewModelNumber();
+        var manualUrl = Generated.NewManualUrl();
         SetupInsertSucceeds();
-        var input = new CatalogProduct
+        var request = new CreateCatalogProductRequest
         {
-            Brand = brand,
-            ModelNumber = modelNumber,
-            MatchKey = spoofedMatchKey,
+            Name = Generated.NewProductName(),
+            ManualUrl = manualUrl,
         };
 
         // Act
-        await _controller.Post(input, TestContext.Current.CancellationToken);
+        var result = await _controller.Post(request, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotEqual(spoofedMatchKey, input.MatchKey);
-        Assert.Equal(CatalogProductMatchKey.Compute(brand, modelNumber), input.MatchKey);
+        var created = Assert.IsType<CreatedODataResult<CatalogProduct>>(result);
+        Assert.Equal(manualUrl.AbsoluteUri, created.Entity.ManualUrl);
     }
 
     [Fact]
@@ -170,7 +168,7 @@ public class CatalogProductsControllerTests
                 It.IsAny<InsertOneOptions>(),
                 It.IsAny<CancellationToken>()))
             .ThrowsAsync(WriteExceptionWithoutADuplicateKey());
-        var input = new CatalogProduct
+        var request = new CreateCatalogProductRequest
         {
             Name = Generated.NewProductName(),
             Brand = Generated.NewBrand(),
@@ -179,7 +177,7 @@ public class CatalogProductsControllerTests
 
         // Act
         var exception = await Record.ExceptionAsync(() =>
-            _controller.Post(input, TestContext.Current.CancellationToken));
+            _controller.Post(request, TestContext.Current.CancellationToken));
 
         // Assert
         Assert.IsType<MongoWriteException>(exception);

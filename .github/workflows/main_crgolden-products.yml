@@ -30,7 +30,7 @@ jobs:
         if: github.actor == 'dependabot[bot]'
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '10.x'
+          dotnet-version: '11.x'
 
       - name: Regenerate lock files and push
         if: github.actor == 'dependabot[bot]'
@@ -107,7 +107,7 @@ jobs:
       - name: Set up .NET Core
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '10.x'
+          dotnet-version: '11.x'
 
       - name: Cache dotnet global tools
         id: cache-dotnet-tools
@@ -159,9 +159,9 @@ jobs:
       - name: Run unit tests with coverage
         run: |
           $arguments = @(
-            'Products.Tests.Unit/bin/Release/net10.0'
+            'Products.Tests.Unit/bin/Release/net11.0'
             '--target', 'dotnet'
-            '--targetargs', 'test --project Products.Tests.Unit --no-build --configuration Release -- --filter-trait Category=Unit --stop-on-fail on --report-xunit-trx --report-xunit-trx-filename unit-tests.trx --results-directory=Products.Tests.Unit/bin/Release/net10.0/TestResults'
+            '--targetargs', 'test --project Products.Tests.Unit --no-build --configuration Release -- --filter-trait Category=Unit --stop-on-fail on --report-xunit-trx --report-xunit-trx-filename unit-tests.trx --results-directory=Products.Tests.Unit/bin/Release/net11.0/TestResults'
             '--format', 'opencover', '--output', 'coverage.opencover.xml'
             '--skipautoprops'
             '--exclude-by-attribute', 'GeneratedCodeAttribute'
@@ -185,9 +185,9 @@ jobs:
           MongoDbPassword: ${{ secrets.MONGO_DB_PASSWORD_TEST }}
         run: |
           $arguments = @(
-            'Products.Tests.Integration/bin/Release/net10.0'
+            'Products.Tests.Integration/bin/Release/net11.0'
             '--target', 'dotnet'
-            '--targetargs', 'test --project Products.Tests.Integration --no-build --configuration Release -- --filter-trait Category=Integration --stop-on-fail on --report-xunit-trx --report-xunit-trx-filename integration-tests.trx --results-directory=Products.Tests.Integration/bin/Release/net10.0/TestResults'
+            '--targetargs', 'test --project Products.Tests.Integration --no-build --configuration Release -- --filter-trait Category=Integration --stop-on-fail on --report-xunit-trx --report-xunit-trx-filename integration-tests.trx --results-directory=Products.Tests.Integration/bin/Release/net11.0/TestResults'
             '--format', 'opencover', '--output', 'coverage-integration.opencover.xml'
             '--skipautoprops'
             '--exclude-by-attribute', 'GeneratedCodeAttribute'
@@ -205,8 +205,8 @@ jobs:
           name: test-results
           if-no-files-found: error
           path: |
-            Products.Tests.Unit/bin/Release/net10.0/TestResults/
-            Products.Tests.Integration/bin/Release/net10.0/TestResults/
+            Products.Tests.Unit/bin/Release/net11.0/TestResults/
+            Products.Tests.Integration/bin/Release/net11.0/TestResults/
 
       - name: dotnet publish
         env:
@@ -215,7 +215,7 @@ jobs:
           dotnet publish Products/Products.csproj
           -c Release
           -r win-x86
-          --self-contained false
+          --self-contained true
           -o ${{ github.workspace }}/publish
 
       - name: Upload artifact for deployment job
@@ -270,11 +270,17 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_6563413908E94D44AB997AD676153ACE }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_1D677D94E6924CF192E6A317EBBD4D40 }}
 
+      - name: Run the app on .NET 11
+        env:
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          AZURE_WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
+        run: az webapp config set --resource-group $env:AZURE_RESOURCE_GROUP --name $env:AZURE_WEBAPP_NAME --net-framework-version v11.0 --output none
+
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
         uses: azure/webapps-deploy@02a81bead70021f5284939794bcec79c271ab383  # v3.0.8
         with:
-          app-name: 'crgolden-products'
+          app-name: ${{ vars.AZURE_WEBAPP_NAME }}
           slot-name: 'Production'
           package: .
           

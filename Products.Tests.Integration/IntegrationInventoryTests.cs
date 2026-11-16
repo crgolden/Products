@@ -239,6 +239,49 @@ public sealed class IntegrationInventoryTests : IDisposable
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    [Fact]
+    public async Task PostingAnInventoryItemWithoutACatalogProductId_Returns400()
+    {
+        var response = await _client.PostAsJsonAsync(
+            ODataQueryParameterTransformer.InventoryItemsPath,
+            new { serialNumber = Generated.NewModelNumber() },
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PostingAnInventoryItemWithACatalogProductId_Returns201WithThatCatalogProductId()
+    {
+        var catalogProductId = Guid.NewGuid();
+
+        var response = await _client.PostAsJsonAsync(
+            ODataQueryParameterTransformer.InventoryItemsPath,
+            new { catalogProductId, serialNumber = Generated.NewModelNumber() },
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>(
+            TestContext.Current.CancellationToken);
+        Assert.Equal(catalogProductId, body.GetProperty(nameof(InventoryItem.CatalogProductId)).GetGuid());
+    }
+
+    [Fact]
+    public async Task PostingACatalogProduct_Returns201WithItsName()
+    {
+        var name = Generated.NewProductName();
+
+        var response = await _client.PostAsJsonAsync(
+            ODataQueryParameterTransformer.CatalogProductsPath,
+            new { name, brand = Generated.NewBrand(), modelNumber = Generated.NewModelNumber() },
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>(
+            TestContext.Current.CancellationToken);
+        Assert.Equal(name, body.GetProperty(nameof(CatalogProduct.Name)).GetString());
+    }
+
     public void Dispose() => _client.Dispose();
 
     private static string JsonPropertyName(string memberName) =>

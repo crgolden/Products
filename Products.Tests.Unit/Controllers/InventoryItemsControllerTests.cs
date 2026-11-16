@@ -72,28 +72,64 @@ public class InventoryItemsControllerTests
     }
 
     [Fact]
-    public async Task Post_SetsOwnerIdFromTheClaim_AndNeverTrustsTheBody()
+    public async Task Post_StoresTheItemUnderTheCallersOwnerId()
     {
         // Arrange
         var ownerId = Guid.NewGuid();
-        var spoofedOwnerId = Guid.NewGuid();
+        var catalogProductId = Guid.NewGuid();
         _controller.ControllerContext = MakeControllerContext(ownerId);
         SetupInsertSucceeds();
-        var catalogProductId = Guid.NewGuid();
-        var input = new InventoryItem
+        var request = new CreateInventoryItemRequest
         {
-            OwnerId = spoofedOwnerId,
             CatalogProductId = catalogProductId,
             SerialNumber = Generated.NewModelNumber(),
         };
 
         // Act
-        var result = await _controller.Post(input, TestContext.Current.CancellationToken);
+        var result = await _controller.Post(request, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.IsType<CreatedODataResult<InventoryItem>>(result);
-        Assert.Equal(ownerId, input.OwnerId);
-        Assert.NotEqual(spoofedOwnerId, input.OwnerId);
+        var created = Assert.IsType<CreatedODataResult<InventoryItem>>(result);
+        Assert.Equal(ownerId, created.Entity.OwnerId);
+    }
+
+    [Fact]
+    public async Task Post_StoresTheRequestedCatalogProductId()
+    {
+        // Arrange
+        var catalogProductId = Guid.NewGuid();
+        var ownerId = Guid.NewGuid();
+        _controller.ControllerContext = MakeControllerContext(ownerId);
+        SetupInsertSucceeds();
+        var request = new CreateInventoryItemRequest { CatalogProductId = catalogProductId };
+
+        // Act
+        var result = await _controller.Post(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        var created = Assert.IsType<CreatedODataResult<InventoryItem>>(result);
+        Assert.Equal(catalogProductId, created.Entity.CatalogProductId);
+    }
+
+    [Fact]
+    public async Task Post_ReturnsBadRequestAndStoresNothing_WhenTheCatalogProductIdIsMissing()
+    {
+        // Arrange
+        var ownerId = Guid.NewGuid();
+        _controller.ControllerContext = MakeControllerContext(ownerId);
+        var request = new CreateInventoryItemRequest { SerialNumber = Generated.NewModelNumber() };
+
+        // Act
+        var result = await _controller.Post(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.IsType<BadRequestObjectResult>(result);
+        _mockCollection.Verify(
+            c => c.InsertOneAsync(
+                It.IsAny<InventoryItem>(),
+                It.IsAny<InsertOneOptions>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -102,10 +138,10 @@ public class InventoryItemsControllerTests
         // Arrange
         _controller.ControllerContext = MakeControllerContext(userId: null);
         var catalogProductId = Guid.NewGuid();
-        var input = new InventoryItem { CatalogProductId = catalogProductId };
+        var request = new CreateInventoryItemRequest { CatalogProductId = catalogProductId };
 
         // Act
-        var result = await _controller.Post(input, TestContext.Current.CancellationToken);
+        var result = await _controller.Post(request, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.IsType<UnauthorizedResult>(result);

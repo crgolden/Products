@@ -61,10 +61,10 @@ public class InventoryItemsController : ODataController
 
     [HttpPost]
     public async Task<IActionResult> Post(
-        [FromBody] InventoryItem inventoryItem,
+        [FromBody] CreateInventoryItemRequest request,
         CancellationToken cancellationToken)
     {
-        if (!ModelState.IsValid)
+        if (!ModelState.IsValid || request.CatalogProductId is not { } catalogProductId)
         {
             return BadRequest(ModelState);
         }
@@ -74,9 +74,17 @@ public class InventoryItemsController : ODataController
             return Unauthorized();
         }
 
-        inventoryItem.Id = Guid.NewGuid();
-        inventoryItem.CreatedAt = DateTimeOffset.UtcNow;
-        inventoryItem.OwnerId = ownerId;
+        var inventoryItem = new InventoryItem
+        {
+            Id = Guid.NewGuid(),
+            OwnerId = ownerId,
+            CatalogProductId = catalogProductId,
+            CreatedAt = DateTimeOffset.UtcNow,
+            SerialNumber = request.SerialNumber,
+            PurchaseDate = request.PurchaseDate,
+            PricePaid = request.PricePaid,
+            Description = request.Description,
+        };
         await _inventoryItems.InsertOneAsync(inventoryItem, cancellationToken: cancellationToken);
         return Created(inventoryItem);
     }

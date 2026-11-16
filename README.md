@@ -13,7 +13,7 @@ How the parts fit together and the rules each keeps: [ARCHITECTURE.md](ARCHITECT
 
 ## Technologies
 
-- .NET 10, ASP.NET Core, `Microsoft.AspNetCore.OData` (OData v4), the MongoDB C# driver.
+- .NET 11, ASP.NET Core, `Microsoft.AspNetCore.OData` (OData v4), the MongoDB C# driver.
 - JWT Bearer authentication against any OIDC provider.
 - OpenAPI at `/openapi/v1.json`; a MongoDB health check at `/health`.
 - In production only: OpenTelemetry (OTLP), Serilog to Elasticsearch, and Azure Blob Storage plus Key Vault for data
@@ -25,15 +25,15 @@ How the parts fit together and the rules each keeps: [ARCHITECTURE.md](ARCHITECT
 | Route | Auth | Notes |
 |---|---|---|
 | `GET /odata/CatalogProducts`, `GET /odata/CatalogProducts({key})` | anonymous | OData `$select`, `$filter`, `$orderby`, `$expand`, `$count`, `$top` (at most 100) |
-| `POST`, `PATCH`, `DELETE /odata/CatalogProducts[({key})]` | `products` scope | `Id`, `CreatedAt`, `UpdatedAt` and `MatchKey` are set by the server; a duplicate brand and model returns 409; `DELETE` returns 409 while any inventory item references the row |
-| `GET`, `POST`, `PATCH`, `DELETE /odata/InventoryItems[({key})]` | `products` scope | only the caller's own items (`OwnerId` is the token's `sub`), so another user's item is 404, never 403 |
+| `POST`, `PATCH`, `DELETE /odata/CatalogProducts[({key})]` | `products` scope | `POST` takes a `CreateCatalogProductRequest`; `Id`, `CreatedAt`, `UpdatedAt` and `MatchKey` are set by the server; a duplicate brand and model returns 409; `DELETE` returns 409 while any inventory item references the row |
+| `GET`, `POST`, `PATCH`, `DELETE /odata/InventoryItems[({key})]` | `products` scope | only the caller's own items (`OwnerId` is the token's `sub`), so another user's item is 404, never 403; `POST` takes a `CreateInventoryItemRequest` and returns 400 without a `CatalogProductId` |
 | `GET /inventory/items?search=`, `GET /inventory/items/{id}`, `POST /inventory/items` | `products` scope | the caller's items merged with their catalog facts; `POST` finds or creates the catalog row and adds the item |
 | `GET /health` | anonymous | pings MongoDB |
 | `GET /openapi/v1.json` | anonymous | the OpenAPI document, with the OData routes described by hand |
 
 ## Prerequisites
 
-- The .NET 10 SDK (`global.json` pins `10.0.201` and rolls forward to the latest feature band).
+- The .NET 11 SDK (`global.json` pins `11.0.100` and rolls forward to the latest feature band).
 - A GitHub personal access token with the `read:packages` scope. The `Shared` package restores from the `crgolden`
   GitHub Packages feed (`NuGet.Config`), which asks for a token even for a public package. Store it as that source's
   credentials in your user NuGet configuration, never in this repo:

@@ -38,8 +38,8 @@ catalog facts. Two hosted services create the collections' indexes at startup.
   operations without a transaction, so an add landing between them can still reference a deleted row.
 - **A changed index definition ships under a new name**, and the initializer drops the old one once the new one
   exists, because MongoDB refuses to redefine an index under an existing name.
-- **Every `Guid` is stored as a string** by the class maps, which the tests register through the same `Register()`
-  methods `Program.cs` calls.
+- **Every `Guid` is stored as a string** by the class maps `Program.cs` registers; the integration tier gets them
+  through `Program.cs` (`WebApplicationFactory<Program>`), and no test declares one.
 - **`ManualUrl` is a `string`** on `CatalogProduct`: the type is also the EDM entity and the PATCH target, and EDM has
   no URI primitive.
 

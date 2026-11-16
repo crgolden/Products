@@ -17,7 +17,7 @@ Both are xUnit v3 projects on Microsoft.Testing.Platform (`global.json` selects 
 |---|---|
 | `Controllers` | every action of the three controllers with mocked MongoDB collections, the authorization attributes, the list materialization filter, and the `$top=0` guard |
 | `Controllers/ODataPipeline` | a minimal OData pipeline hosted on the test server: a list action that fails while streaming must answer 500 before any body, and the same rows without the fault must serialize identically with and without the filter |
-| `Models` | the class maps (Guids stored as strings), the EDM shape of `CatalogProduct`, `CatalogProductMatchKey`, `AddToInventoryRequest` |
+| `Models` | the EDM shape of `CatalogProduct`, `CatalogProductMatchKey`, `AddToInventoryRequest` |
 | `OpenApi` | the hand-built OData paths and schemas in the OpenAPI document |
 | `HealthChecks`, `Extensions`, `TelemetryTests.cs` | the MongoDB health check, `GetRequired<T>`, and the index-creation failure counter |
 
@@ -79,7 +79,8 @@ on Dependabot's pull requests:
 7. End SonarCloud analysis with the quality gate waited; fail while SonarCloud reports any open issue.
 
 The job's `concurrency` group (`products-integration-database`, `queue: max`) runs one build at a time, because every
-run shares the test database. SonarCloud and the integration tier skip Dependabot's pull requests, which get no
+run shares the test database. It never sets `cancel-in-progress`, and without `queue: max` GitHub cancels every
+pending run but the newest. SonarCloud and the integration tier skip Dependabot's pull requests, which get no
 secrets.
 
 ## Coverage
@@ -89,7 +90,7 @@ unit report locally as CI does:
 
 ```powershell
 dotnet tool restore
-dotnet coverlet Products.Tests.Unit/bin/Release/net10.0 `
+dotnet coverlet Products.Tests.Unit/bin/Release/net11.0 `
   --target "dotnet" `
   --targetargs "test --project Products.Tests.Unit --no-build --configuration Release -- --filter-trait Category=Unit" `
   --format opencover --output "coverage.opencover.xml" `

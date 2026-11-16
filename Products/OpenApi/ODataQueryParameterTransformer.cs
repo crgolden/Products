@@ -276,7 +276,7 @@ public class ODataQueryParameterTransformer : IOpenApiDocumentTransformer
         return new OpenApiResponse
         {
             Description = description,
-            Content = new Dictionary<string, OpenApiMediaType>
+            Content = new Dictionary<string, IOpenApiMediaType>
             {
                 ["application/json"] = new OpenApiMediaType { Schema = schema },
             },
@@ -288,7 +288,7 @@ public class ODataQueryParameterTransformer : IOpenApiDocumentTransformer
         return new OpenApiRequestBody
         {
             Required = true,
-            Content = new Dictionary<string, OpenApiMediaType>
+            Content = new Dictionary<string, IOpenApiMediaType>
             {
                 ["application/json"] = new OpenApiMediaType { Schema = schema },
             },

@@ -28,8 +28,8 @@ Register-StepInputs @{
 }
 $repo = $PSScriptRoot
 $sarif = (Join-Path $gateOutput 'products-inspect.sarif')
-$unitTrx = Join-Path $repo 'Products.Tests.Unit\bin\Release\net10.0\TestResults\unit-tests.trx'
-$integrationTrx = Join-Path $repo 'Products.Tests.Integration\bin\Release\net10.0\TestResults\integration-tests.trx'
+$unitTrx = Join-Path $repo 'Products.Tests.Unit\bin\Release\net11.0\TestResults\unit-tests.trx'
+$integrationTrx = Join-Path $repo 'Products.Tests.Integration\bin\Release\net11.0\TestResults\integration-tests.trx'
 $sonarBranch = Get-SonarBranchName
 $beginSonar = "Begin Sonar analysis (branch $sonarBranch)"
 $build = 'Build with dotnet (Release, RestoreLockedMode)'
@@ -128,9 +128,9 @@ if (-not (Test-StepCarried 'jb inspectcode')) {
 if (-not (Test-StepCarried $unit)) {
     if (Test-Path $unitTrx) { Remove-Item $unitTrx -Force }
     $global:LASTEXITCODE = $null
-    dotnet coverlet Products.Tests.Unit\bin\Release\net10.0 `
+    dotnet coverlet Products.Tests.Unit\bin\Release\net11.0 `
         --target "dotnet" `
-        --targetargs "test --project Products.Tests.Unit --no-build --configuration Release -- --filter-trait Category=Unit --stop-on-fail on --report-xunit-trx --report-xunit-trx-filename unit-tests.trx --results-directory=Products.Tests.Unit/bin/Release/net10.0/TestResults" `
+        --targetargs "test --project Products.Tests.Unit --no-build --configuration Release -- --filter-trait Category=Unit --stop-on-fail on --report-xunit-trx --report-xunit-trx-filename unit-tests.trx --results-directory=Products.Tests.Unit/bin/Release/net11.0/TestResults" `
         --format opencover --output "coverage.opencover.xml" `
         --skipautoprops --exclude-by-attribute GeneratedCodeAttribute --exclude-by-file "**/obj/**" `
         --exclude-by-file "**/Program.cs" --does-not-return-attribute DoesNotReturnAttribute --include "[Products]*"
@@ -142,9 +142,9 @@ if (-not (Test-StepCarried $integration)) {
     $env:ASPNETCORE_ENVIRONMENT = 'Development'
     $env:MongoDatabaseName ??= 'crgoldenTest'
     $global:LASTEXITCODE = $null
-    dotnet coverlet Products.Tests.Integration\bin\Release\net10.0 `
+    dotnet coverlet Products.Tests.Integration\bin\Release\net11.0 `
         --target "dotnet" `
-        --targetargs "test --project Products.Tests.Integration --no-build --configuration Release -- --filter-trait Category=Integration --stop-on-fail on --report-xunit-trx --report-xunit-trx-filename integration-tests.trx --results-directory=Products.Tests.Integration/bin/Release/net10.0/TestResults" `
+        --targetargs "test --project Products.Tests.Integration --no-build --configuration Release -- --filter-trait Category=Integration --stop-on-fail on --report-xunit-trx --report-xunit-trx-filename integration-tests.trx --results-directory=Products.Tests.Integration/bin/Release/net11.0/TestResults" `
         --format opencover --output "coverage-integration.opencover.xml" `
         --skipautoprops --exclude-by-attribute GeneratedCodeAttribute --exclude-by-file "**/obj/**" `
         --exclude-by-file "**/Program.cs" --does-not-return-attribute DoesNotReturnAttribute --include "[Products]*"

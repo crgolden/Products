@@ -146,6 +146,8 @@ try
         modelBuilder.EntitySet<InventoryItem>(InventoryItem.EntitySetName);
         modelBuilder.EntityType<CatalogProduct>().Ignore(c => c.MatchKey);
         modelBuilder.Ignore<AddToInventoryRequest>();
+        modelBuilder.Ignore<CreateCatalogProductRequest>();
+        modelBuilder.Ignore<CreateInventoryItemRequest>();
         var model = modelBuilder.GetEdmModel();
         oDataOptions.Select();
         oDataOptions.Filter();
