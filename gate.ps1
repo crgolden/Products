@@ -12,20 +12,18 @@ $gateOutput = if (Get-Command Get-GateOutputDirectory -ErrorAction SilentlyConti
 } else {
     (New-Item -ItemType Directory -Force -Path (Join-Path ([IO.Path]::GetTempPath()) "claude\crgolden-gates\$(Split-Path -Leaf $PSScriptRoot)")).FullName
 }
-Register-GateSteps @('Local MongoDB service', 'Restore local tools', 'Begin Sonar analysis', 'Build with dotnet',
+Register-GateStep @('Local MongoDB service', 'Restore local tools', 'Begin Sonar analysis', 'Build with dotnet',
     'jb inspectcode', 'Run unit tests with coverage', 'Run integration tests with coverage', 'End Sonar analysis',
     'Fail on open Sonar issues')
-Register-StepInputs @{
-    'Local MongoDB service'               = @('*')
-    'Restore local tools'                 = @('dotnet-tools.json')
-    'Begin Sonar analysis'                = @('*')
-    'Build with dotnet'                   = @('*')
-    'jb inspectcode'                      = @('*')
-    'Run unit tests with coverage'        = @('*', '!Products.Tests.Integration/*')
-    'Run integration tests with coverage' = @('*', '!Products.Tests.Unit/*Tests.cs')
-    'End Sonar analysis'                  = @('*')
-    'Fail on open Sonar issues'           = @('*')
-}
+Register-StepInput 'Local MongoDB service' @('*')
+Register-StepInput 'Restore local tools' @('dotnet-tools.json')
+Register-StepInput 'Begin Sonar analysis' @('*')
+Register-StepInput 'Build with dotnet' @('*')
+Register-StepInput 'jb inspectcode' @('*')
+Register-StepInput 'Run unit tests with coverage' @('*', '!Products.Tests.Integration/*')
+Register-StepInput 'Run integration tests with coverage' @('*', '!Products.Tests.Unit/*Tests.cs')
+Register-StepInput 'End Sonar analysis' @('*')
+Register-StepInput 'Fail on open Sonar issues' @('*')
 $repo = $PSScriptRoot
 $sarif = (Join-Path $gateOutput 'products-inspect.sarif')
 $unitTrx = Join-Path $repo 'Products.Tests.Unit\bin\Release\net11.0\TestResults\unit-tests.trx'
@@ -75,8 +73,8 @@ if ($Only) {
 }
 exit (Invoke-Gate {
 Initialize-GateState 'Products' $repo
-Resolve-OwedSteps
-Invoke-CatalogSteps
+Get-OwedStep | Register-OwedStep
+Invoke-GateLibraryStep
 
 if (-not [string]::IsNullOrWhiteSpace($env:MongoServerHost)) {
     if ([string]::IsNullOrWhiteSpace($env:MongoServerPort)) { Stop-Gate 'Local MongoDB service' 'MongoServerHost is set in the environment without MongoServerPort' }
@@ -121,7 +119,7 @@ else {
 
 if (-not (Test-StepCarried 'jb inspectcode')) {
     if (Test-Path $sarif) { Remove-Item $sarif -Force }
-    dotnet jb inspectcode "$repo\Products.slnx" --no-build -e=WARNING --caches-home="$(New-InspectCodeCaches $gateOutput)" --output="$sarif"
+    dotnet jb inspectcode "$repo\Products.slnx" --no-build -e=WARNING --caches-home="$(New-InspectCodeCache $gateOutput)" --output="$sarif"
     Test-Sarif $sarif
 }
 
@@ -155,7 +153,7 @@ if (-not $sonarCarried) {
     $global:LASTEXITCODE = $null
     dotnet-sonarscanner end
     Assert-StepExit $endSonar
-    Test-SonarIssues $sonarIssues 'crgolden_Products' $sonarBranch $sonarStartedAt
+    Assert-NoOpenSonarIssue $sonarIssues 'crgolden_Products' $sonarBranch $sonarStartedAt
 }
 
 Write-Row 'Upload test results / dotnet publish / Upload artifact / deploy' 'NOT RUN' 'delivery steps, not checks'
