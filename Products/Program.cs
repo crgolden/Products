@@ -23,6 +23,7 @@ using Products.Authorization;
 using Products.Extensions;
 using Products.HealthChecks;
 using Products.HostedServices;
+using Products.Logging;
 using Products.Models;
 using Products.OpenApi;
 using Serilog;
@@ -184,6 +185,7 @@ try
     app.UseForwardedHeaders();
     app.UseSerilogRequestLogging(options =>
     {
+        options.GetLevel = RequestLogLevel.Of;
         options.EnrichDiagnosticContext = (diagnosticContext, _) =>
         {
             if (Activity.Current is null)

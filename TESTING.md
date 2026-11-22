@@ -71,7 +71,7 @@ on Dependabot's pull requests:
 1. Restore local tools; begin SonarCloud analysis.
 2. Release build with locked restore and `-warnaserror`.
 3. `dotnet jb inspectcode`, failing on any result.
-4. Unit tier under coverlet (`coverage.opencover.xml`), `--stop-on-fail on`.
+4. Unit tier under coverlet (`coverage.opencover.xml`), every test run to its end.
 5. Integration tier under coverlet (`coverage-integration.opencover.xml`) with `ASPNETCORE_ENVIRONMENT=CI` and the
    settings from repo variables (`OIDC_AUTHORITY`, `MONGO_SERVER_HOST`, `MONGO_SERVER_PORT`, `MONGO_USE_TLS`,
    `MONGO_DATABASE_NAME_TEST`, `MONGO_DB_USERNAME_TEST`) and the secret `MONGO_DB_PASSWORD_TEST`.

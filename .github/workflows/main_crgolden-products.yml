@@ -162,7 +162,7 @@ jobs:
           $arguments = @(
             'Products.Tests.Unit/bin/Release/net11.0'
             '--target', 'dotnet'
-            '--targetargs', 'test --project Products.Tests.Unit --no-build --configuration Release -- --filter-trait Category=Unit --stop-on-fail on --report-xunit-trx --report-xunit-trx-filename unit-tests.trx --results-directory=Products.Tests.Unit/bin/Release/net11.0/TestResults'
+            '--targetargs', 'test --project Products.Tests.Unit --no-build --configuration Release -- --filter-trait Category=Unit --report-xunit-trx --report-xunit-trx-filename unit-tests.trx --results-directory=Products.Tests.Unit/bin/Release/net11.0/TestResults'
             '--format', 'opencover', '--output', 'coverage.opencover.xml'
             '--skipautoprops'
             '--exclude-by-attribute', 'GeneratedCodeAttribute'
@@ -188,7 +188,7 @@ jobs:
           $arguments = @(
             'Products.Tests.Integration/bin/Release/net11.0'
             '--target', 'dotnet'
-            '--targetargs', 'test --project Products.Tests.Integration --no-build --configuration Release -- --filter-trait Category=Integration --stop-on-fail on --report-xunit-trx --report-xunit-trx-filename integration-tests.trx --results-directory=Products.Tests.Integration/bin/Release/net11.0/TestResults'
+            '--targetargs', 'test --project Products.Tests.Integration --no-build --configuration Release -- --filter-trait Category=Integration --report-xunit-trx --report-xunit-trx-filename integration-tests.trx --results-directory=Products.Tests.Integration/bin/Release/net11.0/TestResults'
             '--format', 'opencover', '--output', 'coverage-integration.opencover.xml'
             '--skipautoprops'
             '--exclude-by-attribute', 'GeneratedCodeAttribute'
