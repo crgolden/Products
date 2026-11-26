@@ -828,8 +828,8 @@
       },
       "SharpCompress": {
         "type": "Transitive",
-        "resolved": "0.50.11",
-        "contentHash": "OVurDgTt5RPybp3rRPD0yWlGyao6AfyiVWPNlAgnIhgucdMNthbc+ytpt5tYPDSrk1i+N4wZ9AiNZxKN/XPNsg=="
+        "resolved": "0.50.12",
+        "contentHash": "mWQN8nU4VTF0LMJSQsKLpMScgWzVuF9OE17r9y/kiXb6ssW2JIgWaCjWeNmD1Jt6N5u6Hs1aksJoRdLbb7jTcw=="
       },
       "Snappier": {
         "type": "Transitive",
@@ -969,7 +969,7 @@
           "Serilog.Enrichers.Environment": "[3.0.1, )",
           "Serilog.Sinks.Console": "[6.1.1, )",
           "Shared": "[2.0.0, )",
-          "SharpCompress": "[0.50.11, )",
+          "SharpCompress": "[0.50.12, )",
           "Snappier": "[1.3.2, )"
         }
       }
