@@ -135,7 +135,7 @@ jobs:
             '/d:sonar.host.url=https://sonarcloud.io'
             '/d:sonar.cs.opencover.reportsPaths=coverage.opencover.xml,coverage-integration.opencover.xml'
             '/d:sonar.exclusions=**/bin/**,**/obj/**'
-            '/d:sonar.coverage.exclusions=**/Program.cs,**/gate.ps1'
+            '/d:sonar.coverage.exclusions=**/Program.cs,**/gate.ps1,**/gate.steps.psd1,scripts/gate/**'
             '/d:sonar.qualitygate.wait=true'
             '/d:sonar.scanner.skipJreProvisioning=true'
             '/d:sonar.scm.use.blame.algorithm=GIT_NATIVE_BLAME'

@@ -23,7 +23,7 @@ catalog facts. Two hosted services create the collections' indexes at startup.
 | `Products.Tests.Unit`, `Products.Tests.Integration` | the two test tiers ([TESTING.md](TESTING.md)) |
 | `.github/workflows/main_crgolden-products.yml` | build, inspect, test, analyze and deploy |
 | `NuGet.Config`, `packages.lock.json` files, `dotnet-tools.json`, `global.json` | package sources (the `Shared` package from GitHub Packages), locked restore, pinned tools, the SDK |
-| `gate.ps1` | the maintainers' local gate (README.md, "Gate") |
+| `gate.ps1`, `gate.steps.psd1`, `scripts/gate/` | the maintainers' local gate: its entry point, its step list and the test-MongoDB check (README.md, "Gate") |
 
 ## Invariants
 
