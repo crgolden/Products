@@ -816,8 +816,8 @@
       },
       "Snappier": {
         "type": "Transitive",
-        "resolved": "1.3.2",
-        "contentHash": "qzLhDfEqzPvXajjI4csSieoiMTyUw1s5ofuCx/K7gMCzkl/p2Crf4wYZZK94Z+DKbYNY5RbU2mK7mzkLhFU7Nw=="
+        "resolved": "1.3.3",
+        "contentHash": "SRuKWfwjGf575ZYWAlamjUQ1sZXTZ8YQlMNHP5QTsdjdbHox4fAl6GBclBI892oziSUNvfN1BnJdTKfwsV6kmw=="
       },
       "System.ClientModel": {
         "type": "Transitive",
@@ -953,7 +953,7 @@
           "Serilog.Sinks.Console": "[6.1.1, )",
           "Shared": "[2.0.0, )",
           "SharpCompress": "[0.50.12, )",
-          "Snappier": "[1.3.2, )"
+          "Snappier": "[1.3.3, )"
         }
       }
     }
